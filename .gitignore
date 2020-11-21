@@ -1,0 +1,8 @@
+Lab04.sln
+build/
+libs/
+simpleVertexShader.txt
+simpleFragmentShader.txt
+monkeyhead_smooth.dae
+LinkingAssimpReadme.pdf
+.vs/
