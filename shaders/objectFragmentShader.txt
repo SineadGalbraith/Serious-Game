@@ -1,0 +1,11 @@
+#version 330
+
+//in vec3 LightIntensity;
+in vec2 objectTexture;
+
+uniform sampler2D oTexture;
+
+void main(){
+	gl_FragColor = texture(oTexture, objectTexture);
+	//gl_FragColor = texture(oTexture, objectTexture) * vec4 (LightIntensity, 1.0);
+}
