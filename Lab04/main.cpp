@@ -1,5 +1,3 @@
-
-
 // Windows includes (For Time, IO, etc.)
 #include <windows.h>
 #include <mmsystem.h>
@@ -34,6 +32,8 @@
 
 // GLFW includes
 #include <GLFW\glfw3.h>
+
+#include "GenerateObject.h"
 
 /*----------------------------------------------------------------------------
 MESH TO LOAD
@@ -85,10 +85,6 @@ bool keyC = false;
 
 // ------------ SHADER ------------
 GLuint objectShaderProgramID, skyboxShaderProgramID;
-
-// ------------ VBO/VAO SETUP ------------
-const int i = 16;
-GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
 ModelData bin_data, footpath_data;
@@ -153,66 +149,6 @@ float skyboxVertices[] = {
 	-200.0f, -200.0f,  200.0f,
 	 200.0f, -200.0f,  200.0f
 };
-
-
-#pragma region MESH LOADING
-/*----------------------------------------------------------------------------
-MESH LOADING FUNCTION
-----------------------------------------------------------------------------*/
-
-ModelData load_mesh(const char* file_name) {
-	ModelData modelData;
-
-	/* Use assimp to read the model file, forcing it to be read as    */
-	/* triangles. The second flag (aiProcess_PreTransformVertices) is */
-	/* relevant if there are multiple meshes in the model file that   */
-	/* are offset from the origin. This is pre-transform them so      */
-	/* they're in the right position.                                 */
-	const aiScene* scene = aiImportFile(
-		file_name,
-		aiProcess_Triangulate | aiProcess_PreTransformVertices
-	);
-
-	if (!scene) {
-		fprintf(stderr, "ERROR: reading mesh %s\n", file_name);
-		return modelData;
-	}
-
-	printf("  %i materials\n", scene->mNumMaterials);
-	printf("  %i meshes\n", scene->mNumMeshes);
-	printf("  %i textures\n", scene->mNumTextures);
-
-	for (unsigned int m_i = 0; m_i < scene->mNumMeshes; m_i++) {
-		const aiMesh* mesh = scene->mMeshes[m_i];
-		printf("    %i vertices in mesh\n", mesh->mNumVertices);
-		modelData.mPointCount += mesh->mNumVertices;
-		for (unsigned int v_i = 0; v_i < mesh->mNumVertices; v_i++) {
-			if (mesh->HasPositions()) {
-				const aiVector3D* vp = &(mesh->mVertices[v_i]);
-				modelData.mVertices.push_back(vec3(vp->x, vp->y, vp->z));
-			}
-			if (mesh->HasNormals()) {
-				const aiVector3D* vn = &(mesh->mNormals[v_i]);
-				modelData.mNormals.push_back(vec3(vn->x, vn->y, vn->z));
-			}
-			if (mesh->HasTextureCoords(0)) {
-				const aiVector3D* vt = &(mesh->mTextureCoords[0][v_i]);
-				modelData.mTextureCoords.push_back(vec2(vt->x, vt->y));
-			}
-			if (mesh->HasTangentsAndBitangents()) {
-				/* You can extract tangents and bitangents here              */
-				/* Note that you might need to make Assimp generate this     */
-				/* data for you. Take a look at the flags that aiImportFile  */
-				/* can take.                                                 */
-			}
-		}
-	}
-
-	aiReleaseImport(scene);
-	return modelData;
-}
-
-#pragma endregion MESH LOADING
 
 unsigned int loadCubemap(vector<std::string> faces)
 {
@@ -351,110 +287,13 @@ GLuint CompileShaders(const char* vertexShader, const char* fragmentShader)
 }
 #pragma endregion SHADER_FUNCTIONS
 
-// VBO Functions - click on + to expand
-#pragma region VBO_FUNCTIONS
-void generateObjectBufferMesh() {
-	/*----------------------------------------------------------------------------
-	LOAD MESH HERE AND COPY INTO BUFFERS
-	----------------------------------------------------------------------------*/
 
-	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
-	//Might be an idea to do a check for that before generating and binding the buffer.
-
+void generateBufferObjects() {
+	GenerateObject generateObject;
 	bin_data = load_mesh(BIN_MESH);
+	generateObject.generateObjectBufferMesh(objectShaderProgramID, bin_data, bin);
 	footpath_data = load_mesh(FOOTPATH_MESH);
-
-	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
-	loc3 = glGetAttribLocation(objectShaderProgramID, "vertex_texture");
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	int width, height, nrChannels;
-	unsigned char *data;
-
-	// ------------------------------------- BIN -------------------------------------
-	glGenTextures(1, &VTO[0]);
-	glBindTexture(GL_TEXTURE_2D, VTO[0]);
-
-	data = stbi_load(bin, &width, &height, &nrChannels, 0);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	stbi_image_free(data);
-
-	glGenBuffers(1, &VBO[0]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec3), &bin_data.mVertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec3), &bin_data.mNormals[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec2), &bin_data.mTextureCoords[0], GL_STATIC_DRAW);
-
-	glGenVertexArrays(1, &VAO[0]);
-	glBindVertexArray(VAO[0]);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc3);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	// ------------------------------------- FOOTPATH -------------------------------------
-
-	glGenTextures(1, &VTO[1]);
-	glBindTexture(GL_TEXTURE_2D, VTO[1]);
-
-	data = stbi_load(footpath, &width, &height, &nrChannels, 0);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	stbi_image_free(data);
-
-	glGenBuffers(1, &VBO[3]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec3), &footpath_data.mVertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[4]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec3), &footpath_data.mNormals[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[5]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec2), &footpath_data.mTextureCoords[0], GL_STATIC_DRAW);
-
-	glGenVertexArrays(1, &VAO[1]);
-	glBindVertexArray(VAO[1]);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc3);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
-	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
 }
-
 
 void generateSkybox() {
 	glGenVertexArrays(1, &skyboxVAO);
@@ -465,96 +304,95 @@ void generateSkybox() {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
-#pragma endregion VBO_FUNCTIONS
 
 void display() {
 
-	glEnable(GL_DEPTH_TEST); // enable depth-testing
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glActiveTexture(GL_TEXTURE0);
+	//glEnable(GL_DEPTH_TEST); // enable depth-testing
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glActiveTexture(GL_TEXTURE0);
 
-	// tell GL to only draw onto a pixel if the shape is closer to the viewer
-	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	//// tell GL to only draw onto a pixel if the shape is closer to the viewer
+	//glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
+	//glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-	glm::mat4 model = glm::mat4(1.0f);
+	//glm::mat4 model = glm::mat4(1.0f);
 
-	// ------------------------------------- PROJECTION -------------------------------------
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
-	int proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
+	//// ------------------------------------- PROJECTION -------------------------------------
+	//glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
+	//int proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	// ------------------------------------- CAMERA -------------------------------------
+	//// ------------------------------------- CAMERA -------------------------------------
 
-	glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
+	//glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-	//std::cout << glm::to_string(cameraUp) << std::endl;
+	////std::cout << glm::to_string(cameraUp) << std::endl;
 
-	int view_mat_location = glGetUniformLocation(objectShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
+	//int view_mat_location = glGetUniformLocation(objectShaderProgramID, "view");
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	// ------------------------------------- SKYBOX -------------------------------------
+	//// ------------------------------------- SKYBOX -------------------------------------
 
-	glDepthFunc(GL_LEQUAL);
-	glUseProgram(skyboxShaderProgramID);
-	view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
+	//glDepthFunc(GL_LEQUAL);
+	//glUseProgram(skyboxShaderProgramID);
+	//view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-	view_mat_location = glGetUniformLocation(skyboxShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
+	//view_mat_location = glGetUniformLocation(skyboxShaderProgramID, "view");
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	proj_mat_location = glGetUniformLocation(skyboxShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
+	//proj_mat_location = glGetUniformLocation(skyboxShaderProgramID, "proj");
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	glBindVertexArray(skyboxVAO);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
+	//glBindVertexArray(skyboxVAO);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glDepthFunc(GL_LESS);
+	//glDepthMask(GL_TRUE);
 
-	// ------------------------------------- BIN MODEL USING GLM -------------------------------------
+	//// ------------------------------------- BIN MODEL USING GLM -------------------------------------
 
-	glUseProgram(objectShaderProgramID);
-	glBindTexture(GL_TEXTURE_2D, VTO[0]);
-	glBindVertexArray(VAO[0]);
-	model = glm::mat4(1.0f);
+	//glUseProgram(objectShaderProgramID);
+	//glBindTexture(GL_TEXTURE_2D, VTO[0]);
+	//glBindVertexArray(VAO[0]);
+	//model = glm::mat4(1.0f);
 
-	model = glm::translate(model, glm::vec3(10.0, 50.0, 0.0f));
-	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
+	//model = glm::translate(model, glm::vec3(10.0, 50.0, 0.0f));
+	////model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 
-	int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
+	//int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
 
-	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
+	//glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
-	// ------------------------------------- FOOTPATH MODEL USING GLM -------------------------------------
+	//// ------------------------------------- FOOTPATH MODEL USING GLM -------------------------------------
 
-	glBindTexture(GL_TEXTURE_2D, VTO[1]);
-	glBindVertexArray(VAO[1]);
-	model = glm::mat4(1.0f);
+	//glBindTexture(GL_TEXTURE_2D, VTO[1]);
+	//glBindVertexArray(VAO[1]);
+	//model = glm::mat4(1.0f);
 
-	model = glm::translate(model, glm::vec3(0.0, 20.0, 70.0f));
-	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//model = glm::translate(model, glm::vec3(0.0, 20.0, 70.0f));
+	//model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
+	//matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
 
-	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
+	//glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
 
-	// ------------------------------------- NON-GLM MODEL -------------------------------------
-	//int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
+	//// ------------------------------------- NON-GLM MODEL -------------------------------------
+	////int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
 
-	//mat4 model = identity_mat4();
-	//model = rotate_y_deg(model, rotate_y);
+	////mat4 model = identity_mat4();
+	////model = rotate_y_deg(model, rotate_y);
 
-	//int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
+	////int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
+	////glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
 
-	////glBindVertexArray(VAO[0]);
-	//glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
-	
-	glutSwapBuffers();
+	//////glBindVertexArray(VAO[0]);
+	////glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
+	//
+	//glutSwapBuffers();
 
 }
 
@@ -584,7 +422,8 @@ void init()
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// load mesh into a vertex buffer array
-	generateObjectBufferMesh();
+	generateBufferObjects();
+	//generateObjectBufferMesh();
 }
 
 // Placeholder code for the keypress
@@ -704,7 +543,10 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Hello Triangle");
+	glutCreateWindow("Eco Game");
+
+	// Generate Objects Class
+	GenerateObject generateObject;
 
 	// Tell glut where the display function is
 	glutDisplayFunc(display);
