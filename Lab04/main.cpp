@@ -38,14 +38,25 @@
 /*----------------------------------------------------------------------------
 MESH TO LOAD
 ----------------------------------------------------------------------------*/
-// this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
-// put the mesh in your project directory, or provide a filepath for it here
+
 #define BIN_MESH "./models/rubbishBinCircular.dae"
 #define FOOTPATH_MESH "./models/footpath.dae"
+#define WALL_MESH "./models/wall.dae"
+#define ROAD_MESH "./models/road.dae"
+#define BUILDING1_MESH "./models/building1.dae"
+#define BUILDING2_MESH "./models/building2.dae"
+#define BUILDING3_MESH "./models/building3.dae"
+
 /*----------------------------------------------------------------------------
+TEXTURES
 ----------------------------------------------------------------------------*/
 const char *bin = "./textures/bin_texture.jpg";
 const char *footpath = "./textures/footpath_texture.jpg";
+const char *wall = "./textures/wall_texture.jpg";
+const char *road = "./textures/road_texture.jpg";
+const char *building1 = "./textures/building1_texture.jpg";
+const char *building2 = "./textures/building2_texture.jpg";
+const char *building3 = "./textures/building3_texture.jpg";
 
 #pragma region SimpleTypes
 typedef struct
@@ -63,7 +74,7 @@ int width = 800;
 int height = 600;
 
 // ------------ CAMERA ------------
-glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 100.0f);
+glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 200.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -90,7 +101,7 @@ const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data;
 
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
@@ -416,12 +427,34 @@ void generateObjects() {
 	std::vector < ModelData > dataArray;
 	std::vector < std::string > textureArray;
 
+	// ------------ BIN ------------
 	bin_data = load_mesh(BIN_MESH);
 	dataArray.push_back(bin_data);
 	textureArray.push_back(bin);
+	// ------------ FOOTPATH ------------
 	footpath_data = load_mesh(FOOTPATH_MESH);
 	dataArray.push_back(footpath_data);
 	textureArray.push_back(footpath);
+	// ------------ WALL ------------
+	wall_data = load_mesh(WALL_MESH);
+	dataArray.push_back(wall_data);
+	textureArray.push_back(wall);
+	// ------------ ROAD ------------
+	road_data = load_mesh(ROAD_MESH);
+	dataArray.push_back(road_data);
+	textureArray.push_back(road);
+	// ------------ BUILDING1 ------------
+	building1_data = load_mesh(BUILDING1_MESH);
+	dataArray.push_back(building1_data);
+	textureArray.push_back(building1);
+	// ------------ BUILDING2 ------------
+	building2_data = load_mesh(BUILDING2_MESH);
+	dataArray.push_back(building2_data);
+	textureArray.push_back(building2);
+	// ------------ BUILDING3 ------------
+	building3_data = load_mesh(BUILDING3_MESH);
+	dataArray.push_back(building3_data);
+	textureArray.push_back(building3);
 
 	generateObjectBufferMesh(dataArray, textureArray);
 }
@@ -446,8 +479,6 @@ void display() {
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-	glm::mat4 model = glm::mat4(1.0f);
 
 	// ------------------------------------- PROJECTION -------------------------------------
 	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
@@ -482,48 +513,117 @@ void display() {
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 
-	// ------------------------------------- BIN MODEL USING GLM -------------------------------------
+	// ------------------------------------- BIN -------------------------------------
 
 	glUseProgram(objectShaderProgramID);
 	glBindTexture(GL_TEXTURE_2D, VTO[0]);
 	glBindVertexArray(VAO[0]);
-	model = glm::mat4(1.0f);
+	glm::mat4 binModel = glm::mat4(1.0f);
 
-	model = glm::translate(model, glm::vec3(10.0, 50.0, 0.0f));
+	binModel = glm::translate(binModel, glm::vec3(-8.0, 5.0, 30.0f));
 	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
-	// ------------------------------------- FOOTPATH MODEL USING GLM -------------------------------------
+	// ------------------------------------- FOOTPATHS -------------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, VTO[1]);
 	glBindVertexArray(VAO[1]);
-	model = glm::mat4(1.0f);
+	glm::mat4 footpathModel = glm::mat4(1.0f);
 
-	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::translate(model, glm::vec3(0.0, 0.0, 70.0f));
+	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, -70.0f));
 
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
+	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 2.0f, -70.0f));
 
-	// ------------------------------------- NON-GLM MODEL -------------------------------------
-	//int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 
-	//mat4 model = identity_mat4();
-	//model = rotate_y_deg(model, rotate_y);
+	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
-	//int matrix_location = glGetUniformLocation(binShaderProgramID, "model");
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
+	// ------------------------------------- WALL -------------------------------------
 
-	////glBindVertexArray(VAO[0]);
-	//glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
-	
+	glBindTexture(GL_TEXTURE_2D, VTO[2]);
+	glBindVertexArray(VAO[2]);
+	glm::mat4 wallModel = glm::mat4(1.0f);
+
+	wallModel = glm::translate(wallModel, glm::vec3(28.0f, 2.0f, -100.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wallModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, wall_data.mPointCount);
+
+	// ------------------------------------- ROAD -------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, VTO[3]);
+	glBindVertexArray(VAO[3]);
+	glm::mat4 roadModel = glm::mat4(1.0f);
+
+	roadModel = glm::translate(roadModel, glm::vec3(-87.0f, 0.0f, -100.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, road_data.mPointCount);
+
+	// ------------------------------------- BUILDING1 -------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, VTO[4]);
+	glBindVertexArray(VAO[4]);
+	glm::mat4 building1Model = glm::mat4(1.0f);
+
+	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, 20.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
+
+	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
+
+	building1Model = glm::mat4(1.0f);
+
+	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, -100.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
+
+	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
+
+	// ------------------------------------- BUILDING2 -------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, VTO[5]);
+	glBindVertexArray(VAO[5]);
+	glm::mat4 building2Model = glm::mat4(1.0f);
+
+	building2Model = glm::translate(building2Model, glm::vec3(-180.0f, 0.0f, -40.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
+
+	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
+
+	// ------------------------------------- BUILDING3 -------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, VTO[6]);
+	glBindVertexArray(VAO[6]);
+	glm::mat4 building3Model = glm::mat4(1.0f);
+
+	building3Model = glm::translate(building3Model, glm::vec3(-180.0f, 0.0f, 100.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
+
+	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
+
+	// --------------------------------------------------------------------------
+
 	glutSwapBuffers();
 
 }
@@ -559,12 +659,15 @@ void init()
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int x, int y) {
-	float cameraSpeed = 100.0f * delta;
+	float cameraSpeed = 300.0f * delta;
 	switch (key) {
-		// Move Camera Left
+	// Move Camera Left
 	case 'a':
-		cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		if (cameraPosition.x > -140) {
+			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
 		break;
+	// Use camera to move around the screen
 	case 'c':
 		if (!keyC) {
 			keyC = true;
@@ -573,27 +676,37 @@ void keypress(unsigned char key, int x, int y) {
 			keyC = false;
 		}
 		break;
-		// Move Camera Right
+	// Move Camera Right
 	case 'd':
-		cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		if (cameraPosition.x < 20) {
+			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
 		break;
-		// Move Camera Down
+	// Move Camera Down
 	case 'j':
-		cameraPosition -= cameraSpeed * up;
+		if (cameraPosition.y > 10) {
+			cameraPosition -= cameraSpeed * up;
+		}
 		break;
-		// Move Camera Backwards
+	// Move Camera Backwards
 	case 's':
-		cameraPosition -= cameraSpeed * cameraFront;
+		if (cameraPosition.z < 190) {
+			cameraPosition -= cameraSpeed * cameraFront;
+		}
 		break;
-		// Move Camera Up
+	// Move Camera Up
 	case 'u':
-		cameraPosition += cameraSpeed * up;
+		if (cameraPosition.y < 30) {
+			cameraPosition += cameraSpeed * up;
+		}
 		break;
-		// Move Camera Forwards
+	// Move Camera Forwards
 	case 'w':
-		cameraPosition += cameraSpeed * cameraFront;
+		if (cameraPosition.z > -100) {
+			cameraPosition += cameraSpeed * cameraFront;
+		}
 		break;
-		// For button 'x' on the keyboard, the player will have the option to quit the game.
+	// For button 'x' on the keyboard, the player will have the option to quit the game.
 	case 'x':
 		int messageBoxID = MessageBox(NULL, "Do you want to quit the game?", "Menu", MB_YESNO | MB_ICONQUESTION);
 
@@ -659,8 +772,7 @@ void zoomCameraMovement(int button, int direction, int x, int y) {
 			cameraPosition += cameraSpeed * cameraFront;
 		}
 	}
-	// Can't zoom too far
-	if (cameraPosition.z < 200) {
+	if (cameraPosition.z < 190) {
 		// If the wheel direction is negative, zoom out
 		if (direction < 0) {
 			cameraPosition -= cameraSpeed * cameraFront;
