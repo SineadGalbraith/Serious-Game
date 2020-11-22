@@ -44,7 +44,6 @@ MESH TO LOAD
 #define FOOTPATH_MESH "./models/footpath.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-
 const char *bin = "./textures/bin_texture.jpg";
 const char *footpath = "./textures/footpath_texture.jpg";
 
@@ -353,16 +352,11 @@ GLuint CompileShaders(const char* vertexShader, const char* fragmentShader)
 
 // VBO Functions - click on + to expand
 #pragma region VBO_FUNCTIONS
-void generateObjectBufferMesh() {
-	/*----------------------------------------------------------------------------
-	LOAD MESH HERE AND COPY INTO BUFFERS
-	----------------------------------------------------------------------------*/
+void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <std::string> textureArray) {
 
-	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
-	//Might be an idea to do a check for that before generating and binding the buffer.
-
-	bin_data = load_mesh(BIN_MESH);
-	footpath_data = load_mesh(FOOTPATH_MESH);
+	int width, height, nrChannels;
+	unsigned char *data;
+	int counter = 0;
 
 	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
 	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
@@ -373,88 +367,64 @@ void generateObjectBufferMesh() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	int width, height, nrChannels;
-	unsigned char *data;
+	if (dataArray.size() == textureArray.size()) {
+		for (int i = 0; i < dataArray.size(); i++) {
+			glGenTextures(1, &VTO[i]);
+			glBindTexture(GL_TEXTURE_2D, VTO[i]);
 
-	// ------------------------------------- BIN -------------------------------------
-	glGenTextures(1, &VTO[0]);
-	glBindTexture(GL_TEXTURE_2D, VTO[0]);
+			data = stbi_load(textureArray[i].c_str(), &width, &height, &nrChannels, 0);
 
-	data = stbi_load(bin, &width, &height, &nrChannels, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
+			stbi_image_free(data);
 
-	stbi_image_free(data);
+			glGenBuffers(1, &VBO[counter]);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter]);
+			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mVertices[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &VBO[0]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec3), &bin_data.mVertices[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &VBO[counter+1]);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+1]);
+			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mNormals[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &VBO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec3), &bin_data.mNormals[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &VBO[counter + 2]);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+2]);
+			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mTextureCoords[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &VBO[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-	glBufferData(GL_ARRAY_BUFFER, bin_data.mPointCount * sizeof(vec2), &bin_data.mTextureCoords[0], GL_STATIC_DRAW);
+			glGenVertexArrays(1, &VAO[i]);
+			glBindVertexArray(VAO[i]);
 
-	glGenVertexArrays(1, &VAO[0]);
-	glBindVertexArray(VAO[0]);
+			glEnableVertexAttribArray(loc1);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter]);
+			glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+			glEnableVertexAttribArray(loc2);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 1]);
+			glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+			glEnableVertexAttribArray(loc3);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 2]);
+			glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glEnableVertexAttribArray(loc3);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	// ------------------------------------- FOOTPATH -------------------------------------
-
-	glGenTextures(1, &VTO[1]);
-	glBindTexture(GL_TEXTURE_2D, VTO[1]);
-
-	data = stbi_load(footpath, &width, &height, &nrChannels, 0);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	stbi_image_free(data);
-
-	glGenBuffers(1, &VBO[3]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec3), &footpath_data.mVertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[4]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec3), &footpath_data.mNormals[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO[5]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
-	glBufferData(GL_ARRAY_BUFFER, footpath_data.mPointCount * sizeof(vec2), &footpath_data.mTextureCoords[0], GL_STATIC_DRAW);
-
-	glGenVertexArrays(1, &VAO[1]);
-	glBindVertexArray(VAO[1]);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc3);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
-	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
+			counter += 3;
+		}
+	}
 }
 
+void generateObjects() {
+
+	std::vector < ModelData > dataArray;
+	std::vector < std::string > textureArray;
+
+	bin_data = load_mesh(BIN_MESH);
+	dataArray.push_back(bin_data);
+	textureArray.push_back(bin);
+	footpath_data = load_mesh(FOOTPATH_MESH);
+	dataArray.push_back(footpath_data);
+	textureArray.push_back(footpath);
+
+	generateObjectBufferMesh(dataArray, textureArray);
+}
 
 void generateSkybox() {
 	glGenVertexArrays(1, &skyboxVAO);
@@ -584,7 +554,7 @@ void init()
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// load mesh into a vertex buffer array
-	generateObjectBufferMesh();
+	generateObjects();
 }
 
 // Placeholder code for the keypress
