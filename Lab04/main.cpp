@@ -46,6 +46,7 @@ MESH TO LOAD
 #define BUILDING1_MESH "./models/building1.dae"
 #define BUILDING2_MESH "./models/building2.dae"
 #define BUILDING3_MESH "./models/building3.dae"
+#define GRASS_MESH "./models/grass.dae"
 
 /*----------------------------------------------------------------------------
 TEXTURES
@@ -57,6 +58,7 @@ const char *road = "./textures/road_texture.jpg";
 const char *building1 = "./textures/building1_texture.jpg";
 const char *building2 = "./textures/building2_texture.jpg";
 const char *building3 = "./textures/building3_texture.jpg";
+const char *grass = "./textures/grass_texture.jpg";
 
 #pragma region SimpleTypes
 typedef struct
@@ -74,7 +76,7 @@ int width = 800;
 int height = 600;
 
 // ------------ CAMERA ------------
-glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 200.0f);
+glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 220.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -101,7 +103,7 @@ const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data;
 
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
@@ -121,47 +123,47 @@ vector<std::string> faces
 };
 
 float skyboxVertices[] = {
-	-200.0f,  200.0f, -200.0f,
-	-200.0f, -200.0f, -200.0f,
-	 200.0f, -200.0f, -200.0f,
-	 200.0f, -200.0f, -200.0f,
-	 200.0f,  200.0f, -200.0f,
-	-200.0f,  200.0f, -200.0f,
+	-500.0f,  500.0f, -500.0f,
+	-500.0f, -500.0f, -500.0f,
+	 500.0f, -500.0f, -500.0f,
+	 500.0f, -500.0f, -500.0f,
+	 500.0f,  500.0f, -500.0f,
+	-500.0f,  500.0f, -500.0f,
 
-	-200.0f, -200.0f,  200.0f,
-	-200.0f, -200.0f, -200.0f,
-	-200.0f,  200.0f, -200.0f,
-	-200.0f,  200.0f, -200.0f,
-	-200.0f,  200.0f,  200.0f,
-	-200.0f, -200.0f,  200.0f,
+	-500.0f, -500.0f,  500.0f,
+	-500.0f, -500.0f, -500.0f,
+	-500.0f,  500.0f, -500.0f,
+	-500.0f,  500.0f, -500.0f,
+	-500.0f,  500.0f,  500.0f,
+	-500.0f, -500.0f,  500.0f,
 
-	 200.0f, -200.0f, -200.0f,
-	 200.0f, -200.0f,  200.0f,
-	 200.0f,  200.0f,  200.0f,
-	 200.0f,  200.0f,  200.0f,
-	 200.0f,  200.0f, -200.0f,
-	 200.0f, -200.0f, -200.0f,
+	 500.0f, -500.0f, -500.0f,
+	 500.0f, -500.0f,  500.0f,
+	 500.0f,  500.0f,  500.0f,
+	 500.0f,  500.0f,  500.0f,
+	 500.0f,  500.0f, -500.0f,
+	 500.0f, -500.0f, -500.0f,
 
-	-200.0f, -200.0f,  200.0f,
-	-200.0f,  200.0f,  200.0f,
-	 200.0f,  200.0f,  200.0f,
-	 200.0f,  200.0f,  200.0f,
-	 200.0f, -200.0f,  200.0f,
-	-200.0f, -200.0f,  200.0f,
+	-500.0f, -500.0f,  500.0f,
+	-500.0f,  500.0f,  500.0f,
+	 500.0f,  500.0f,  500.0f,
+	 500.0f,  500.0f,  500.0f,
+	 500.0f, -500.0f,  500.0f,
+	-500.0f, -500.0f,  500.0f,
 
-	-200.0f,  200.0f, -200.0f,
-	 200.0f,  200.0f, -200.0f,
-	 200.0f,  200.0f,  200.0f,
-	 200.0f,  200.0f,  200.0f,
-	-200.0f,  200.0f,  200.0f,
-	-200.0f,  200.0f, -200.0f,
+	-500.0f,  500.0f, -500.0f,
+	 500.0f,  500.0f, -500.0f,
+	 500.0f,  500.0f,  500.0f,
+	 500.0f,  500.0f,  500.0f,
+	-500.0f,  500.0f,  500.0f,
+	-500.0f,  500.0f, -500.0f,
 
-	-200.0f, -200.0f, -200.0f,
-	-200.0f, -200.0f,  200.0f,
-	 200.0f, -200.0f, -200.0f,
-	 200.0f, -200.0f, -200.0f,
-	-200.0f, -200.0f,  200.0f,
-	 200.0f, -200.0f,  200.0f
+	-500.0f, -500.0f, -500.0f,
+	-500.0f, -500.0f,  500.0f,
+	 500.0f, -500.0f, -500.0f,
+	 500.0f, -500.0f, -500.0f,
+	-500.0f, -500.0f,  500.0f,
+	 500.0f, -500.0f,  500.0f
 };
 
 
@@ -455,6 +457,10 @@ void generateObjects() {
 	building3_data = load_mesh(BUILDING3_MESH);
 	dataArray.push_back(building3_data);
 	textureArray.push_back(building3);
+	// ------------ GRASS ------------
+	grass_data = load_mesh(GRASS_MESH);
+	dataArray.push_back(grass_data);
+	textureArray.push_back(grass);
 
 	generateObjectBufferMesh(dataArray, textureArray);
 }
@@ -520,10 +526,37 @@ void display() {
 	glBindVertexArray(VAO[0]);
 	glm::mat4 binModel = glm::mat4(1.0f);
 
-	binModel = glm::translate(binModel, glm::vec3(-8.0, 5.0, 30.0f));
+	binModel = glm::translate(binModel, glm::vec3(-20.0, 5.0, 135.0f));
 	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
+
+	binModel = glm::mat4(1.0f);
+
+	binModel = glm::translate(binModel, glm::vec3(18.0, 5.0, 0.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
+
+	binModel = glm::mat4(1.0f);
+
+	binModel = glm::translate(binModel, glm::vec3(-20.0, 5.0, -120.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
+
+	binModel = glm::mat4(1.0f);
+
+	binModel = glm::translate(binModel, glm::vec3(18.0, 5.0, -300.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
@@ -534,14 +567,14 @@ void display() {
 	glBindVertexArray(VAO[1]);
 	glm::mat4 footpathModel = glm::mat4(1.0f);
 
-	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, -70.0f));
+	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, -20.0f));
 
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
-	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 2.0f, -70.0f));
+	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 0.0f, 0.0f));
 
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
@@ -567,7 +600,7 @@ void display() {
 	glBindVertexArray(VAO[3]);
 	glm::mat4 roadModel = glm::mat4(1.0f);
 
-	roadModel = glm::translate(roadModel, glm::vec3(-87.0f, 0.0f, -100.0f));
+	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
 
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
@@ -622,7 +655,29 @@ void display() {
 
 	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 
-	// --------------------------------------------------------------------------
+	// ------------------------------------- GRASS -------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, VTO[7]);
+	glBindVertexArray(VAO[7]);
+	glm::mat4 grassModel = glm::mat4(1.0f);
+
+	grassModel = glm::translate(grassModel, glm::vec3(0.0f, 0.0f, -390.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
+
+	grassModel = glm::mat4(1.0f);
+
+	grassModel = glm::translate(grassModel, glm::vec3(-350.0f, 0.0f, -300.0f));
+
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
+
+	// ---------------------------------------------------------------------------------
 
 	glutSwapBuffers();
 
@@ -690,7 +745,7 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	// Move Camera Backwards
 	case 's':
-		if (cameraPosition.z < 190) {
+		if (cameraPosition.z < 220) {
 			cameraPosition -= cameraSpeed * cameraFront;
 		}
 		break;
@@ -702,7 +757,7 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	// Move Camera Forwards
 	case 'w':
-		if (cameraPosition.z > -100) {
+		if (cameraPosition.z > -300) {
 			cameraPosition += cameraSpeed * cameraFront;
 		}
 		break;
@@ -766,13 +821,14 @@ void mouseCameraMovement(int x, int y) {
 
 void zoomCameraMovement(int button, int direction, int x, int y) {
 	float cameraSpeed = 10.0f;
-	if (cameraPosition.z > -100) {
+	if (cameraPosition.z > -300) {
 		// If the wheel direction is positive, zoom in
 		if (direction > 0) {
 			cameraPosition += cameraSpeed * cameraFront;
 		}
 	}
-	if (cameraPosition.z < 190) {
+	if (cameraPosition.z < 220) {
+		std::cout << cameraPosition.z << std::endl;
 		// If the wheel direction is negative, zoom out
 		if (direction < 0) {
 			cameraPosition -= cameraSpeed * cameraFront;
