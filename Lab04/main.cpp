@@ -503,8 +503,8 @@ void display() {
 	glBindVertexArray(VAO[1]);
 	model = glm::mat4(1.0f);
 
-	model = glm::translate(model, glm::vec3(0.0, 20.0, 70.0f));
 	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0, 0.0, 70.0f));
 
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
