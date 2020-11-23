@@ -47,6 +47,8 @@ MESH TO LOAD
 #define BUILDING2_MESH "./models/building2.dae"
 #define BUILDING3_MESH "./models/building3.dae"
 #define GRASS_MESH "./models/grass.dae"
+#define CAR_MESH "./models/car.obj"
+#define WHEELS_MESH "./models/wheels.obj"
 
 /*----------------------------------------------------------------------------
 TEXTURES
@@ -96,14 +98,14 @@ static DWORD last_time = 0;
 bool keyC = false;
 
 // ------------ SHADER ------------
-GLuint objectShaderProgramID, skyboxShaderProgramID;
+GLuint objectShaderProgramID, skyboxShaderProgramID, carShaderProgramID, wheelsShaderProgramID;
 
 // ------------ VBO/VAO SETUP ------------
 const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheels_data;
 
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
@@ -111,6 +113,10 @@ GLfloat rotate_y = 0.0f;
 // ------------ SKYBOX ------------
 unsigned int skyboxVAO, skyboxVBO;
 unsigned int cubemapTexture;
+
+// ------------ CAR ------------
+unsigned int carVAO, carVBO1, carVBO2;
+unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
 
 vector<std::string> faces
 {
@@ -474,6 +480,55 @@ void generateSkybox() {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
+
+void generateCar() {
+	car_data = load_mesh(CAR_MESH);
+	loc1 = glGetAttribLocation(carShaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(carShaderProgramID, "vertex_normal");
+
+	glGenBuffers(1, &carVBO1);
+	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
+	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mVertices[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &carVBO2);
+	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
+	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mNormals[0], GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, &carVAO);
+	glBindVertexArray(carVAO);
+
+	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+}
+
+void generateWheels() {
+	wheels_data = load_mesh(WHEELS_MESH);
+	loc1 = glGetAttribLocation(carShaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(carShaderProgramID, "vertex_normal");
+
+	glGenBuffers(1, &wheelsVBO1);
+	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
+	glBufferData(GL_ARRAY_BUFFER, wheels_data.mPointCount * sizeof(vec3), &wheels_data.mVertices[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &carVBO2);
+	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
+	glBufferData(GL_ARRAY_BUFFER, wheels_data.mPointCount * sizeof(vec3), &wheels_data.mNormals[0], GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, &wheelsVAO);
+	glBindVertexArray(wheelsVAO);
+
+	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+}
 #pragma endregion VBO_FUNCTIONS
 
 void display() {
@@ -519,6 +574,53 @@ void display() {
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 
+	// ------------------------------------- CAR -------------------------------------
+
+	glUseProgram(carShaderProgramID);
+	glBindVertexArray(carVAO);
+	glm::mat4 carModel = glm::mat4(1.0f);
+
+	carModel = glm::translate(carModel, glm::vec3(-75.0f, 13.0f, 50.0f));
+
+	int matrix_location = glGetUniformLocation(carShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
+
+	view_mat_location = glGetUniformLocation(carShaderProgramID, "view");
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
+
+	proj_mat_location = glGetUniformLocation(carShaderProgramID, "proj");
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
+
+	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
+
+	// ------------------------------------- WHEELS -------------------------------------
+
+	glUseProgram(wheelsShaderProgramID);
+	glBindVertexArray(wheelsVAO);
+	glm::mat4 wheelsModel = glm::mat4(1.0f);
+
+	wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 70.0f));
+
+	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
+
+	view_mat_location = glGetUniformLocation(wheelsShaderProgramID, "view");
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
+
+	proj_mat_location = glGetUniformLocation(wheelsShaderProgramID, "proj");
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
+
+	glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
+
+	wheelsModel = glm::mat4(1.0f);
+
+	wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 25.0f));
+
+	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
+
+	glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
+
 	// ------------------------------------- BIN -------------------------------------
 
 	glUseProgram(objectShaderProgramID);
@@ -529,7 +631,7 @@ void display() {
 	binModel = glm::translate(binModel, glm::vec3(-20.0, 5.0, 135.0f));
 	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 
-	int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
@@ -705,11 +807,15 @@ void init()
 	// Set up the shaders
 	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
+	carShaderProgramID = CompileShaders("./shaders/carVertexShader.txt", "./shaders/carFragmentShader.txt");
+	wheelsShaderProgramID = CompileShaders("./shaders/wheelsVertexShader.txt", "./shaders/wheelsFragmentShader.txt");
 	// generate Skybox VBO and VAO
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// load mesh into a vertex buffer array
 	generateObjects();
+	generateCar();
+	generateWheels();
 }
 
 // Placeholder code for the keypress
