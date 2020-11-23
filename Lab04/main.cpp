@@ -948,7 +948,7 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Hello Triangle");
+	glutCreateWindow("Eco Game");
 
 	// Tell glut where the display function is
 	glutDisplayFunc(display);
