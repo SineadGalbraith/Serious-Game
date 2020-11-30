@@ -779,10 +779,10 @@ void init()
 	textureShaderProgramID = CompileShaders("./shaders/textureVertexShader.txt", "./shaders/textureFragmentShader.txt");
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
 	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
-	// generate Skybox VBO and VAO
+	// generate Skybox and load Skybox images
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
-	// load mesh into a vertex buffer array
+	// Generate the rest of the Models (both with textures and without)
 	generateModels();
 	generateObjects();
 }
