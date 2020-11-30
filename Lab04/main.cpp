@@ -55,7 +55,8 @@ TEXTURES
 ----------------------------------------------------------------------------*/
 const char *bin = "./textures/bin_texture.jpg";
 const char *footpath = "./textures/footpath_texture.jpg";
-const char *wall = "./textures/wall_texture.jpg";
+//const char *wall = "./textures/wall_texture.jpg";
+const char *wall = "./textures/wall.jpg";
 const char *road = "./textures/road_texture.jpg";
 const char *building1 = "./textures/building1_texture.jpg";
 const char *building2 = "./textures/building2_texture.jpg";
@@ -74,8 +75,8 @@ typedef struct
 
 using namespace std;
 
-int width = 800;
-int height = 600;
+int screenWidth = 800;
+int screenHeight = 600;
 
 // ------------ CAMERA ------------
 glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 220.0f);
@@ -88,8 +89,8 @@ glm::vec3 cameraRight = glm::vec3(0.0f);
 bool firstMouse = true;
 float yaw = -90.0f;
 float pitch = 0.0f;
-float lastX = (float)width / 2.0;
-float lastY = (float)height / 2.0;
+float lastX = (float)screenWidth / 2.0;
+float lastY = (float)screenHeight / 2.0;
 float fov = 45.0f;
 
 float delta;
@@ -117,6 +118,9 @@ unsigned int cubemapTexture;
 // ------------ CAR ------------
 unsigned int carVAO, carVBO1, carVBO2;
 unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
+
+unsigned int texture;
+
 
 vector<std::string> faces
 {
@@ -371,104 +375,56 @@ GLuint CompileShaders(const char* vertexShader, const char* fragmentShader)
 
 // VBO Functions - click on + to expand
 #pragma region VBO_FUNCTIONS
-void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <std::string> textureArray) {
+void generateObjectBufferMesh() {
 
-	int width, height, nrChannels;
-	unsigned char *data;
-	int counter = 0;
+	wall_data = load_mesh(WALL_MESH);
 
 	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
 	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
 	loc3 = glGetAttribLocation(objectShaderProgramID, "vertex_texture");
+
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	if (dataArray.size() == textureArray.size()) {
-		for (int i = 0; i < dataArray.size(); i++) {
-			glGenTextures(1, &VTO[i]);
-			glBindTexture(GL_TEXTURE_2D, VTO[i]);
+	int width, height, nrChannels;
+	unsigned char *data = stbi_load("./textures/wall.jpg", &width, &height, &nrChannels, 0);
 
-			data = stbi_load(textureArray[i].c_str(), &width, &height, &nrChannels, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(data);
 
-			stbi_image_free(data);
+	glGenBuffers(1, &VBO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, wall_data.mPointCount * sizeof(vec3), &wall_data.mVertices[0], GL_STATIC_DRAW);
 
-			glGenBuffers(1, &VBO[counter]);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter]);
-			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mVertices[0], GL_STATIC_DRAW);
+	glGenBuffers(1, &VBO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, wall_data.mPointCount * sizeof(vec3), &wall_data.mNormals[0], GL_STATIC_DRAW);
 
-			glGenBuffers(1, &VBO[counter+1]);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+1]);
-			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mNormals[0], GL_STATIC_DRAW);
+	glGenBuffers(1, &VBO[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+	glBufferData(GL_ARRAY_BUFFER, wall_data.mPointCount * sizeof(vec2), &wall_data.mTextureCoords[0], GL_STATIC_DRAW);
 
-			glGenBuffers(1, &VBO[counter + 2]);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+2]);
-			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mTextureCoords[0], GL_STATIC_DRAW);
+	glGenVertexArrays(1, &VAO[0]);
+	glBindVertexArray(VAO[0]);
 
-			glGenVertexArrays(1, &VAO[i]);
-			glBindVertexArray(VAO[i]);
+	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-			glEnableVertexAttribArray(loc1);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter]);
-			glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-			glEnableVertexAttribArray(loc2);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 1]);
-			glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-			glEnableVertexAttribArray(loc3);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 2]);
-			glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-			counter += 3;
-		}
-	}
-}
-
-void generateObjects() {
-
-	std::vector < ModelData > dataArray;
-	std::vector < std::string > textureArray;
-
-	// ------------ BIN ------------
-	bin_data = load_mesh(BIN_MESH);
-	dataArray.push_back(bin_data);
-	textureArray.push_back(bin);
-	// ------------ FOOTPATH ------------
-	footpath_data = load_mesh(FOOTPATH_MESH);
-	dataArray.push_back(footpath_data);
-	textureArray.push_back(footpath);
-	// ------------ WALL ------------
-	wall_data = load_mesh(WALL_MESH);
-	dataArray.push_back(wall_data);
-	textureArray.push_back(wall);
-	// ------------ ROAD ------------
-	road_data = load_mesh(ROAD_MESH);
-	dataArray.push_back(road_data);
-	textureArray.push_back(road);
-	// ------------ BUILDING1 ------------
-	building1_data = load_mesh(BUILDING1_MESH);
-	dataArray.push_back(building1_data);
-	textureArray.push_back(building1);
-	// ------------ BUILDING2 ------------
-	building2_data = load_mesh(BUILDING2_MESH);
-	dataArray.push_back(building2_data);
-	textureArray.push_back(building2);
-	// ------------ BUILDING3 ------------
-	building3_data = load_mesh(BUILDING3_MESH);
-	dataArray.push_back(building3_data);
-	textureArray.push_back(building3);
-	// ------------ GRASS ------------
-	grass_data = load_mesh(GRASS_MESH);
-	dataArray.push_back(grass_data);
-	textureArray.push_back(grass);
-
-	generateObjectBufferMesh(dataArray, textureArray);
+	glEnableVertexAttribArray(loc3);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
 void generateSkybox() {
@@ -535,137 +491,46 @@ void display() {
 
 	glEnable(GL_DEPTH_TEST); // enable depth-testing
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0);
 
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-	// ------------------------------------- PROJECTION -------------------------------------
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
-	int proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
-
 	// ------------------------------------- CAMERA -------------------------------------
 
 	glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-	//std::cout << glm::to_string(cameraUp) << std::endl;
+	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)screenWidth / (float)screenHeight, 0.1f, 1000.0f);
 
+	// ------------------------------------- GET VARIABLES -------------------------------------
+
+	int matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	int view_mat_location = glGetUniformLocation(objectShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
+	int proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
 
-	// ------------------------------------- SKYBOX -------------------------------------
-
-	glDepthFunc(GL_LEQUAL);
-	glUseProgram(skyboxShaderProgramID);
-	view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
-
-	view_mat_location = glGetUniformLocation(skyboxShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
-
-	proj_mat_location = glGetUniformLocation(skyboxShaderProgramID, "proj");
+	// ------------------------------------- PROJECTION -------------------------------------
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	glBindVertexArray(skyboxVAO);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
-
-	// ------------------------------------- CAR -------------------------------------
-
-	glUseProgram(carShaderProgramID);
-	glBindVertexArray(carVAO);
-	glm::mat4 carModel = glm::mat4(1.0f);
-
-	carModel = glm::translate(carModel, glm::vec3(-75.0f, 13.0f, 50.0f));
-
-	int matrix_location = glGetUniformLocation(carShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
-
-	view_mat_location = glGetUniformLocation(carShaderProgramID, "view");
+	// ------------------------------------- VIEW -------------------------------------
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	proj_mat_location = glGetUniformLocation(carShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
-
-	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
-
-	// ------------------------------------- WHEELS -------------------------------------
-
-	glUseProgram(wheelsShaderProgramID);
-	glBindVertexArray(wheelsVAO);
-	glm::mat4 wheelsModel = glm::mat4(1.0f);
-
-	wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 70.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
-
-	view_mat_location = glGetUniformLocation(wheelsShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
-
-	proj_mat_location = glGetUniformLocation(wheelsShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
-
-	glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
-
-	wheelsModel = glm::mat4(1.0f);
-
-	wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 25.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
-
-	// ------------------------------------- BIN -------------------------------------
-
+	// ------------------------------------- WALL -------------------------------------
+	glBindTexture(GL_TEXTURE_2D, texture);
 	glUseProgram(objectShaderProgramID);
-	glBindTexture(GL_TEXTURE_2D, VTO[0]);
 	glBindVertexArray(VAO[0]);
-	glm::mat4 binModel = glm::mat4(1.0f);
+	glm::mat4 wallModel = glm::mat4(1.0f);
 
-	binModel = glm::translate(binModel, glm::vec3(-20.0, 5.0, 135.0f));
-	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
+	wallModel = glm::translate(wallModel, glm::vec3(28.0f, 2.0f, -100.0f));
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wallModel));
 
-	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
-
-	binModel = glm::mat4(1.0f);
-
-	binModel = glm::translate(binModel, glm::vec3(18.0, 5.0, 0.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
-
-	binModel = glm::mat4(1.0f);
-
-	binModel = glm::translate(binModel, glm::vec3(-20.0, 5.0, -120.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
-
-	binModel = glm::mat4(1.0f);
-
-	binModel = glm::translate(binModel, glm::vec3(18.0, 5.0, -300.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
+	glDrawArrays(GL_TRIANGLES, 0, wall_data.mPointCount);
 
 	// ------------------------------------- FOOTPATHS -------------------------------------
 
-	glBindTexture(GL_TEXTURE_2D, VTO[1]);
+	/*glBindTexture(GL_TEXTURE_2D, VTO[1]);
 	glBindVertexArray(VAO[1]);
 	glm::mat4 footpathModel = glm::mat4(1.0f);
 
@@ -681,105 +546,73 @@ void display() {
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 
-	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
+	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);*/
+	
+	//// ------------------------------------- SKYBOX -------------------------------------
+	//glDepthFunc(GL_LEQUAL);
+	//glUseProgram(skyboxShaderProgramID);
+	//view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-	// ------------------------------------- WALL -------------------------------------
+	//view_mat_location = glGetUniformLocation(skyboxShaderProgramID, "view");
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	glBindTexture(GL_TEXTURE_2D, VTO[2]);
-	glBindVertexArray(VAO[2]);
-	glm::mat4 wallModel = glm::mat4(1.0f);
+	//proj_mat_location = glGetUniformLocation(skyboxShaderProgramID, "proj");
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	wallModel = glm::translate(wallModel, glm::vec3(28.0f, 2.0f, -100.0f));
+	//glBindVertexArray(skyboxVAO);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glDepthFunc(GL_LESS);
+	//glDepthMask(GL_TRUE);
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wallModel));
+	//// ------------------------------------- CAR -------------------------------------
 
-	glDrawArrays(GL_TRIANGLES, 0, wall_data.mPointCount);
+	//glUseProgram(carShaderProgramID);
+	//glBindVertexArray(carVAO);
+	//glm::mat4 carModel = glm::mat4(1.0f);
 
-	// ------------------------------------- ROAD -------------------------------------
+	//carModel = glm::translate(carModel, glm::vec3(-75.0f, 13.0f, 50.0f));
 
-	glBindTexture(GL_TEXTURE_2D, VTO[3]);
-	glBindVertexArray(VAO[3]);
-	glm::mat4 roadModel = glm::mat4(1.0f);
+	//int matrix_location = glGetUniformLocation(carShaderProgramID, "model");
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
 
-	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
+	//view_mat_location = glGetUniformLocation(carShaderProgramID, "view");
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
+	//proj_mat_location = glGetUniformLocation(carShaderProgramID, "proj");
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	glDrawArrays(GL_TRIANGLES, 0, road_data.mPointCount);
+	//glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
 
-	// ------------------------------------- BUILDING1 -------------------------------------
+	//// ------------------------------------- WHEELS -------------------------------------
 
-	glBindTexture(GL_TEXTURE_2D, VTO[4]);
-	glBindVertexArray(VAO[4]);
-	glm::mat4 building1Model = glm::mat4(1.0f);
+	//glUseProgram(wheelsShaderProgramID);
+	//glBindVertexArray(wheelsVAO);
+	//glm::mat4 wheelsModel = glm::mat4(1.0f);
 
-	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, 20.0f));
+	//wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 70.0f));
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
+	//matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
 
-	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
+	//view_mat_location = glGetUniformLocation(wheelsShaderProgramID, "view");
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	building1Model = glm::mat4(1.0f);
+	//proj_mat_location = glGetUniformLocation(wheelsShaderProgramID, "proj");
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, -100.0f));
+	//glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
 
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
+	//wheelsModel = glm::mat4(1.0f);
 
-	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
+	//wheelsModel = glm::translate(wheelsModel, glm::vec3(-75.0f, 8.0f, 25.0f));
 
-	// ------------------------------------- BUILDING2 -------------------------------------
+	//matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelsModel));
 
-	glBindTexture(GL_TEXTURE_2D, VTO[5]);
-	glBindVertexArray(VAO[5]);
-	glm::mat4 building2Model = glm::mat4(1.0f);
-
-	building2Model = glm::translate(building2Model, glm::vec3(-180.0f, 0.0f, -40.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-
-	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
-
-	// ------------------------------------- BUILDING3 -------------------------------------
-
-	glBindTexture(GL_TEXTURE_2D, VTO[6]);
-	glBindVertexArray(VAO[6]);
-	glm::mat4 building3Model = glm::mat4(1.0f);
-
-	building3Model = glm::translate(building3Model, glm::vec3(-180.0f, 0.0f, 100.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-
-	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
-
-	// ------------------------------------- GRASS -------------------------------------
-
-	glBindTexture(GL_TEXTURE_2D, VTO[7]);
-	glBindVertexArray(VAO[7]);
-	glm::mat4 grassModel = glm::mat4(1.0f);
-
-	grassModel = glm::translate(grassModel, glm::vec3(0.0f, 0.0f, -390.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
-
-	grassModel = glm::mat4(1.0f);
-
-	grassModel = glm::translate(grassModel, glm::vec3(-350.0f, 0.0f, -300.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
-
-	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
-
-	// ---------------------------------------------------------------------------------
+	//glDrawArrays(GL_TRIANGLES, 0, wheels_data.mPointCount);
+	// --------------------------------------------------------------------------------
 
 	glutSwapBuffers();
 
@@ -813,7 +646,8 @@ void init()
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// load mesh into a vertex buffer array
-	generateObjects();
+	//generateObjects();
+	generateObjectBufferMesh();
 	generateCar();
 	generateWheels();
 }
@@ -947,7 +781,7 @@ int main(int argc, char** argv) {
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-	glutInitWindowSize(width, height);
+	glutInitWindowSize(screenWidth, screenHeight);
 	glutCreateWindow("Eco Game");
 
 	// Tell glut where the display function is
