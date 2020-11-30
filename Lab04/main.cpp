@@ -96,7 +96,7 @@ static DWORD last_time = 0;
 bool keyC = false;
 
 // ------------ SHADER ------------
-GLuint objectShaderProgramID, skyboxShaderProgramID, carShaderProgramID, wheelsShaderProgramID;
+GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
 
 // ------------ VBO/VAO SETUP ------------
 const int i = 16;
@@ -377,9 +377,9 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 	unsigned char *data;
 	int counter = 0;
 
-	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
-	loc3 = glGetAttribLocation(objectShaderProgramID, "vertex_texture");
+	loc1 = glGetAttribLocation(textureShaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(textureShaderProgramID, "vertex_normal");
+	loc3 = glGetAttribLocation(textureShaderProgramID, "vertex_texture");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -431,7 +431,7 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 	}
 }
 
-void generateObjects() {
+void generateModels() {
 
 	std::vector < ModelData > dataArray;
 	std::vector < std::string > textureArray;
@@ -478,10 +478,14 @@ void generateSkybox() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
 
-void generateCar() {
+void generateObjects() {
 	car_data = load_mesh(CAR_MESH);
-	loc1 = glGetAttribLocation(carShaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(carShaderProgramID, "vertex_normal");
+	wheel_data = load_mesh(WHEEL_MESH);
+
+	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
+
+	// -------------------------------- CAR --------------------------------
 
 	glGenBuffers(1, &carVBO1);
 	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
@@ -500,13 +504,8 @@ void generateCar() {
 	glEnableVertexAttribArray(loc2);
 	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-}
 
-void generateWheels() {
-	wheel_data = load_mesh(WHEEL_MESH);
-	loc1 = glGetAttribLocation(wheelsShaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(wheelsShaderProgramID, "vertex_normal");
-
+	// -------------------------------- WHEEL --------------------------------
 	glGenBuffers(1, &wheelsVBO1);
 	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
 	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mVertices[0], GL_STATIC_DRAW);
@@ -524,8 +523,8 @@ void generateWheels() {
 	glEnableVertexAttribArray(loc2);
 	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
 }
+
 #pragma endregion VBO_FUNCTIONS
 
 void display() {
@@ -538,27 +537,26 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-	// ------------------------------------- PROJECTION -------------------------------------
+	int matrix_location, view_mat_location, proj_mat_location;
+
+	// ------------------------------------- PROJECTION ------------------------------------- (model Shader)
 	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 1000.0f);
-	int proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
+	proj_mat_location = glGetUniformLocation(textureShaderProgramID, "proj");
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
-	// ------------------------------------- CAMERA -------------------------------------
-
+	// ------------------------------------- CAMERA ------------------------------------- (model Shader)
 	glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
-
-	int view_mat_location = glGetUniformLocation(objectShaderProgramID, "view");
+	view_mat_location = glGetUniformLocation(textureShaderProgramID, "view");
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
 
-	// ------------------------------------- SKYBOX -------------------------------------
-
+	// ------------------------------------- SKYBOX ------------------------------------- (skybox Shader)
 	glDepthFunc(GL_LEQUAL);
 	glUseProgram(skyboxShaderProgramID);
+
 	view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
 	view_mat_location = glGetUniformLocation(skyboxShaderProgramID, "view");
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
-
 	proj_mat_location = glGetUniformLocation(skyboxShaderProgramID, "proj");
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
@@ -569,248 +567,187 @@ void display() {
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 
-	// ------------------------------------- CAR -------------------------------------
-
-	glUseProgram(carShaderProgramID);
+	// ------------------------------------- CAR ------------------------------------- (object Shader)
+	glUseProgram(objectShaderProgramID);
 	glBindVertexArray(carVAO);
+
+	glm::vec3 objectColour = glm::vec3(0.0f, 0.5f, 0.5f);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColour[0]);
+
 	glm::mat4 carModel = glm::mat4(1.0f);
-
 	carModel = glm::translate(carModel, glm::vec3(-90.0f, 9.5f, 50.0f));
-
-	int matrix_location = glGetUniformLocation(carShaderProgramID, "model");
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
-
-	view_mat_location = glGetUniformLocation(carShaderProgramID, "view");
+	view_mat_location = glGetUniformLocation(objectShaderProgramID, "view");
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
-
-	proj_mat_location = glGetUniformLocation(carShaderProgramID, "proj");
+	proj_mat_location = glGetUniformLocation(objectShaderProgramID, "proj");
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
 
 	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
 
-	// ------------------------------------- WHEELS -------------------------------------
-
-	glUseProgram(wheelsShaderProgramID);
-
-	view_mat_location = glGetUniformLocation(wheelsShaderProgramID, "view");
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, glm::value_ptr(view));
-
-	proj_mat_location = glGetUniformLocation(wheelsShaderProgramID, "proj");
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, glm::value_ptr(proj));
-
+	// ------------------------------------- WHEELS ------------------------------------- (object Shader)
 	glBindVertexArray(wheelsVAO);
-	
+
+	objectColour = glm::vec3(0.8f, 0.8f, 0.8f);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColour[0]);
+
 	// Front-right
 	glm::mat4 wheelModel = glm::mat4(1.0f);
-
 	wheelModel = glm::translate(wheelModel, glm::vec3(-80.0f, 5.0f, 35.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	//wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Front-left
 	wheelModel = glm::mat4(1.0f);
-
 	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 35.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-right 
 	wheelModel = glm::mat4(1.0f);
-
 	wheelModel = glm::translate(wheelModel, glm::vec3(-80.0f, 5.0f, 65.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-left
 	wheelModel = glm::mat4(1.0f);
-
 	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 65.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(wheelsShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-	// ------------------------------------- BIN -------------------------------------
-
-	glUseProgram(objectShaderProgramID);
+	// ------------------------------------- BIN ------------------------------------- (texture Shader)
+	glUseProgram(textureShaderProgramID);
 	glBindTexture(GL_TEXTURE_2D, VTO[0]);
+	glBindVertexArray(VAO[0]);
 
 	uvScalar = 1;
-	int uvscalar_mat_location = glGetUniformLocation(objectShaderProgramID, "uvScalar");
+	int uvscalar_mat_location = glGetUniformLocation(textureShaderProgramID, "uvScalar");
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
-	glBindVertexArray(VAO[0]);
+	// Bin 1
 	glm::mat4 binModel = glm::mat4(1.0f);
-
 	binModel = glm::translate(binModel, glm::vec3(-25.0, 3.0, 135.0f));
 	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
+	// Bin 2
 	binModel = glm::mat4(1.0f);
-
 	binModel = glm::translate(binModel, glm::vec3(25.0, 3.0, 0.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
+	// Bin 3
 	binModel = glm::mat4(1.0f);
-
 	binModel = glm::translate(binModel, glm::vec3(-25.0, 3.0, -120.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
+	// Bin 4
 	binModel = glm::mat4(1.0f);
-
 	binModel = glm::translate(binModel, glm::vec3(25.0, 3.0, -300.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
-	// ------------------------------------- FOOTPATHS -------------------------------------
-
+	// ------------------------------------- FOOTPATHS ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[1]);
 	glBindVertexArray(VAO[1]);
-	glm::mat4 footpathModel = glm::mat4(1.0f);
 
 	uvScalar = 15;
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
+	// Footpath 1
+	glm::mat4 footpathModel = glm::mat4(1.0f);
 	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, -20.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
+	// Footpath 2
 	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 0.0f, 0.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
-	// ------------------------------------- ROAD -------------------------------------
-
+	// ------------------------------------- ROAD ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[2]);
 	glBindVertexArray(VAO[2]);
-	glm::mat4 roadModel = glm::mat4(1.0f);
 
 	uvScalar = 5;
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
+	// Road
+	glm::mat4 roadModel = glm::mat4(1.0f);
 	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, road_data.mPointCount);
 
-	// ------------------------------------- BUILDING1 -------------------------------------
-
+	// ------------------------------------- BUILDING1 ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[3]);
 	glBindVertexArray(VAO[3]);
-	glm::mat4 building1Model = glm::mat4(1.0f);
 
 	uvScalar = 10;
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
+	// Building 1 - 1
+	glm::mat4 building1Model = glm::mat4(1.0f);
 	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, 20.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-
 	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 
+	// Building 1 - 2
 	building1Model = glm::mat4(1.0f);
-
 	building1Model = glm::translate(building1Model, glm::vec3(-180.0f, 0.0f, -100.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-
 	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 
-	// ------------------------------------- BUILDING2 -------------------------------------
-
+	// ------------------------------------- BUILDING2 ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[4]);
 	glBindVertexArray(VAO[4]);
-	glm::mat4 building2Model = glm::mat4(1.0f);
-
+	
 	uvScalar = 5;
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
+	// Building 2 - 1
+	glm::mat4 building2Model = glm::mat4(1.0f);
 	building2Model = glm::translate(building2Model, glm::vec3(-180.0f, 0.0f, -40.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-
 	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 
+	// Building 2 - 2
 	building2Model = glm::mat4(1.0f);
-
 	building2Model = glm::translate(building2Model, glm::vec3(-180.0f, 0.0f, 195.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-
 	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 
-	// ------------------------------------- BUILDING3 -------------------------------------
-
+	// ------------------------------------- BUILDING3 ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[5]);
-	glBindVertexArray(VAO[5]);
-	glm::mat4 building3Model = glm::mat4(1.0f);
-
+	glBindVertexArray(VAO[5]); 
+	
 	uvScalar = 10;
 	glUniform1f(uvscalar_mat_location, uvScalar);
 
+	// Building 3 - 1
+	glm::mat4 building3Model = glm::mat4(1.0f);
 	building3Model = glm::translate(building3Model, glm::vec3(-180.0f, 0.0f, 100.0f));
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-
 	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 
-	// ------------------------------------- GRASS -------------------------------------
-
+	// ------------------------------------- GRASS ------------------------------------- (texture Shader)
 	glBindTexture(GL_TEXTURE_2D, VTO[6]);
 	glBindVertexArray(VAO[6]);
-	glm::mat4 grassModel = glm::mat4(1.0f);
 
 	uvScalar = 50;
 	glUniform1f(uvscalar_mat_location, uvScalar);
+
+	// Grass
+	glm::mat4 grassModel = glm::mat4(1.0f);
 	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -5.0f, 120.0f));
-
-
-	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
-
 	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
 
 	// ---------------------------------------------------------------------------------
@@ -839,17 +776,15 @@ void updateScene() {
 void init()
 {
 	// Set up the shaders
-	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
+	textureShaderProgramID = CompileShaders("./shaders/textureVertexShader.txt", "./shaders/textureFragmentShader.txt");
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
-	carShaderProgramID = CompileShaders("./shaders/carVertexShader.txt", "./shaders/carFragmentShader.txt");
-	wheelsShaderProgramID = CompileShaders("./shaders/wheelsVertexShader.txt", "./shaders/wheelsFragmentShader.txt");
+	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
 	// generate Skybox VBO and VAO
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// load mesh into a vertex buffer array
+	generateModels();
 	generateObjects();
-	generateCar();
-	generateWheels();
 }
 
 // Placeholder code for the keypress

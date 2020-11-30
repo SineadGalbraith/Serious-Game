@@ -1,0 +1,9 @@
+#version 330
+
+in vec2 objectTexture;
+
+uniform sampler2D oTexture;
+
+void main(){
+	gl_FragColor = texture(oTexture, objectTexture);
+}
