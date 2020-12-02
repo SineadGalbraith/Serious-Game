@@ -49,6 +49,7 @@ MESH TO LOAD
 #define CAR_MESH "./models/car.obj"
 #define WHEEL_MESH "./models/wheel.dae"
 #define LIGHT_MESH "./models/cube2.dae"
+#define BOTTLE_MESH "./models/bottle.dae"
 
 /*----------------------------------------------------------------------------
 TEXTURES
@@ -60,6 +61,7 @@ const char *building1 = "./textures/building1_texture.jpg";
 const char *building2 = "./textures/building2_texture.jpg";
 const char *building3 = "./textures/building3_texture.jpg";
 const char *grass = "./textures/grass_texture.jpg";
+const char *bottle = "./textures/bottle_texture.jpg";
 
 #pragma region SimpleTypes
 typedef struct
@@ -104,7 +106,7 @@ const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, light_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, light_data, bottle_data;
 
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
@@ -488,6 +490,10 @@ void generateModels() {
 	grass_data = load_mesh(GRASS_MESH);
 	dataArray.push_back(grass_data);
 	textureArray.push_back(grass);
+	// ------------ BOTTLE ------------
+	bottle_data = load_mesh(BOTTLE_MESH);
+	dataArray.push_back(bottle_data);
+	textureArray.push_back(bottle);
 
 	generateObjectBufferMesh(dataArray, textureArray);
 }
@@ -840,6 +846,42 @@ void display() {
 	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -6.0f, -20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
 	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
+
+	// ------------------------------------- BOTTLE ------------------------------------- (texture Shader)
+	// uvScalar
+	uvScalar = 20;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[7]);
+	glBindVertexArray(VAO[7]);
+
+	// Bottle 1
+	glm::mat4 bottleModel = glm::mat4(1.0f);
+	bottleModel = glm::translate(bottleModel, glm::vec3(8.0f, 12.0f, 70.0f));
+	bottleModel = glm::rotate(bottleModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+
+	// Bottle 2
+	bottleModel = glm::mat4(1.0f);
+	bottleModel = glm::translate(bottleModel, glm::vec3(-8.0f, 2.0f, 50.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+
+	// Bottle 3
+	bottleModel = glm::mat4(1.0f);
+	bottleModel = glm::translate(bottleModel, glm::vec3(-2.0f, 2.0f, 30.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+
+
+	// Bottle 4
+	bottleModel = glm::mat4(1.0f);
+	bottleModel = glm::translate(bottleModel, glm::vec3(-8.0f, 2.0f, 50.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+
 
 	// ---------------------------------------------------------------------------------
 
