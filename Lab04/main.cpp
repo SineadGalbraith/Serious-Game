@@ -118,8 +118,8 @@ unsigned int cubemapTexture;
 // ------------ CAR ------------
 unsigned int carVAO, carVBO1, carVBO2;
 unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
-glm::vec3 carPos1 = glm::vec3(-90.0f, 9.0f, 140.0f);
-glm::vec3 carPos2 = glm::vec3(-60.0f, 9.0f, -1000.0f);
+glm::vec3 carPos1 = glm::vec3(-90.0f, 9.0f, 5000.0f);
+glm::vec3 carPos2 = glm::vec3(-60.0f, 9.0f, -10000.0f);
 bool drawCar1 = true;
 bool drawCar2 = true;
 
@@ -664,6 +664,7 @@ void display() {
 	else {
 		drawCar2 = false;
 	}
+
 	// ------------------------------------- WHEELS ------------------------------------- (object Shader)
 	glBindVertexArray(wheelsVAO);
 
