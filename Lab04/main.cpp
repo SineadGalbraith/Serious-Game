@@ -96,6 +96,7 @@ float delta;
 static DWORD last_time = 0;
 
 bool keyC = false;
+bool keyO = false;
 
 // ------------ SHADER ------------
 GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
@@ -123,6 +124,14 @@ float uvScalar = 0;
 
 // ------------ LIGHTING ------------
 glm::vec3 lightPos(-20.0f, 100.0f, 100.0f);
+
+// ------------ OVERHEAD VIEW ------------
+glm::vec3 overheadPos = glm::vec3(-50.0f, 350.0f, 200.0f);
+glm::vec3 overheadCameraFront = glm::vec3(0.5f, -1.0f, -0.85f);
+glm::vec3 overheadUp = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 lastCameraPos;
+glm::vec3 lastCameraFront;
+glm::vec3 lastCameraUp;
 
 vector<std::string> faces
 {
@@ -574,15 +583,27 @@ void display() {
 	glUniformMatrix4fv(glGetUniformLocation(textureShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 
 	// ------------------------------------- CAMERA ------------------------------------- (texture Shader)
-	glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
+	lastCameraPos = cameraPosition;
+	lastCameraFront = cameraFront;
+	lastCameraUp = cameraUp;
+	glm::mat4 view = glm::mat4(1.0f);
+
+	view = glm::lookAt(lastCameraPos, lastCameraPos + lastCameraFront, lastCameraUp);
 	glUniformMatrix4fv(glGetUniformLocation(textureShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
 	// ------------------------------------- SKYBOX ------------------------------------- (skybox Shader)
 	glDepthFunc(GL_LEQUAL);
 	glUseProgram(skyboxShaderProgramID);
-
-	view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
-
+	
+	if (!keyO) {
+		view = glm::lookAt(lastCameraPos, lastCameraPos + lastCameraFront, lastCameraUp);
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+	}
+	if (keyO) {
+		view = glm::lookAt(overheadPos, overheadPos + overheadCameraFront, overheadUp);
+		view = glm::rotate(view, glm::radians(-120.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+	}
 	glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 
@@ -768,6 +789,12 @@ void display() {
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
 	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 
+	// Building 1 - 3
+	building1Model = glm::mat4(1.0f);
+	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -152.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
+	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
+
 	// ------------------------------------- BUILDING2 ------------------------------------- (texture Shader)
 	// uvScalar
 	uvScalar = 5;	
@@ -780,6 +807,12 @@ void display() {
 	// Building 2 - 1
 	glm::mat4 building2Model = glm::mat4(1.0f);
 	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -39.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
+	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
+
+	// Building 2 - 2
+	building2Model = glm::mat4(1.0f);
+	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -211.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
 	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 
@@ -899,7 +932,7 @@ void keypress(unsigned char key, int x, int y) {
 	switch (key) {
 	// Move Camera Left
 	case 'a':
-		if (cameraPosition.x > -140) {
+		if (cameraPosition.x > -140 && !keyO) {
 			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
@@ -914,31 +947,39 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	// Move Camera Right
 	case 'd':
-		if (cameraPosition.x < 20) {
+		if (cameraPosition.x < 20 && !keyO) {
 			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
 	// Move Camera Down
 	case 'j':
-		if (cameraPosition.y >= 10) {
+		if (cameraPosition.y >= 10 && !keyO) {
 			cameraPosition -= cameraSpeed * up;
 		}
 		break;
+	// Overhead View
+	case 'o':
+		if (!keyO) {
+			keyO = true;
+		}
+		else if (keyO) {
+			keyO = false;
+		}
 	// Move Camera Backwards
 	case 's':
-		if (cameraPosition.z < 220) {
+		if (cameraPosition.z < 220 && !keyO) {
 			cameraPosition -= cameraSpeed * cameraFront;
 		}
 		break;
 	// Move Camera Up
 	case 'u':
-		if (cameraPosition.y < 30) {
+		if (cameraPosition.y < 30 && !keyO) {
 			cameraPosition += cameraSpeed * up;
 		}
 		break;
 	// Move Camera Forwards
 	case 'w':
-		if (cameraPosition.z > -300) {
+		if (cameraPosition.z > -300 && !keyO) {
 			cameraPosition += cameraSpeed * cameraFront;
 		}
 		break;
@@ -1002,7 +1043,7 @@ void mouseCameraMovement(int x, int y) {
 
 void zoomCameraMovement(int button, int direction, int x, int y) {
 	float cameraSpeed = 10.0f;
-	if (cameraPosition.z > -300) {
+	if (cameraPosition.z > -300 && !keyO) {
 		if (cameraPosition.y > 5) {
 			// If the wheel direction is positive, zoom in
 			if (direction > 0) {
@@ -1010,7 +1051,7 @@ void zoomCameraMovement(int button, int direction, int x, int y) {
 			}
 		}
 	}
-	if (cameraPosition.z < 220) {
+	if (cameraPosition.z < 220 && !keyO) {
 		if (cameraPosition.y + 2> 5) {
 			// If the wheel direction is negative, zoom out
 			if (direction < 0) {
