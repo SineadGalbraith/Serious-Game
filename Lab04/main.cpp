@@ -48,7 +48,6 @@ MESH TO LOAD
 #define GRASS_MESH "./models/grass.dae"
 #define CAR_MESH "./models/car.obj"
 #define WHEEL_MESH "./models/wheel.dae"
-#define LIGHT_MESH "./models/cube2.dae"
 #define BOTTLE_MESH "./models/bottle.dae"
 
 /*----------------------------------------------------------------------------
@@ -99,14 +98,14 @@ static DWORD last_time = 0;
 bool keyC = false;
 
 // ------------ SHADER ------------
-GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID, lightShaderProgramID;
+GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
 
 // ------------ VBO/VAO SETUP ------------
 const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, light_data, bottle_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data;
 
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
@@ -123,8 +122,7 @@ unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
 float uvScalar = 0;
 
 // ------------ LIGHTING ------------
-unsigned int lightVAO, lightVBO1;
-glm::vec3 lightPos(0.0f, 120.0f, 0.0f);
+glm::vec3 lightPos(-20.0f, 100.0f, 100.0f);
 
 vector<std::string> faces
 {
@@ -558,19 +556,6 @@ void generateObjects() {
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
-void addLight() {
-	light_data = load_mesh(LIGHT_MESH);
-	loc1 = glGetAttribLocation(lightShaderProgramID, "vertex_position");
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
-	glGenBuffers(1, &lightVBO1);
-	glBindBuffer(GL_ARRAY_BUFFER, lightVBO1);
-	glBufferData(GL_ARRAY_BUFFER, light_data.mPointCount * sizeof(vec3), &light_data.mVertices[0], GL_STATIC_DRAW);
-	glEnableVertexAttribArray(loc1);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-}
-
-
 #pragma endregion VBO_FUNCTIONS
 
 void display() {
@@ -623,7 +608,7 @@ void display() {
 	glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 
 	glm::mat4 carModel = glm::mat4(1.0f);
-	carModel = glm::translate(carModel, glm::vec3(-45.0f, 5.0f, 40.0f));
+	carModel = glm::translate(carModel, glm::vec3(-90.0f, 9.0f, 40.0f));
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
 
@@ -637,52 +622,45 @@ void display() {
 
 	// Front-right
 	glm::mat4 wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-40.0f, 3.0f, 32.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-80.0f, 5.0f, 25.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Front-left
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-49.5f, 3.0f, 32.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 25.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-right 
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-40.0f, 3.0f, 48.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-81.0f, 5.0f, 56.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-left
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-49.5f, 3.0f, 48.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 56.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
-
-	// ------------------------------------- LIGHT ------------------------------------- (light Shader)
-	glUseProgram(lightShaderProgramID);
-	glBindVertexArray(lightVAO);
-
-	glUniformMatrix4fv(glGetUniformLocation(lightShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-	glUniformMatrix4fv(glGetUniformLocation(lightShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
-
-	glm::mat4 lightSource = glm::mat4(1.0f);
-	lightSource = glm::translate(lightSource, lightPos);
-
-	glUniformMatrix4fv(glGetUniformLocation(lightShaderProgramID, "model"), 1, GL_FALSE, glm::value_ptr(lightSource));
-
-	glDrawArrays(GL_TRIANGLES, 0, light_data.mPointCount);
 
 	//------------------------------------- BIN ------------------------------------- (texture Shader)
 	glUseProgram(textureShaderProgramID);
 
 	// Diffuse material
-	glUniform1d(glGetUniformLocation(textureShaderProgramID, "material.diffuse"), 1);
+	glUniform1d(glGetUniformLocation(textureShaderProgramID, "material.diffuse"), 10);
 
 	// UV Scalar
 	uvScalar = 1;
 	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
-
 	// Light & View Position
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "light.position"), 1, &lightPos[0]);
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "viewPos"), 1, &cameraPosition[0]);
@@ -709,7 +687,7 @@ void display() {
 
 	// Bin 1
 	glm::mat4 binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(-10.0, 2.0, 50.0f));
+	binModel = glm::translate(binModel, glm::vec3(-20.0, 3.0, 135.0f));
 	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
@@ -717,19 +695,19 @@ void display() {
 
 	// Bin 2
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(10.0, 2.0, 0.0f));
+	binModel = glm::translate(binModel, glm::vec3(20.0, 3.0, 20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
 	// Bin 3
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(-10.0, 2.0, -120.0f));
+	binModel = glm::translate(binModel, glm::vec3(-20.0, 3.0, -100.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
 	// Bin 4
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(10.0, 2.0, -170.0f));
+	binModel = glm::translate(binModel, glm::vec3(20.0, 3.0, -220.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
@@ -744,13 +722,13 @@ void display() {
 
 	// Footpath 1
 	glm::mat4 footpathModel = glm::mat4(1.0f);
-	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 1.0f, 0.0f));
+	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 
 	// Footpath 2
 	footpathModel = glm::mat4(1.0f);
-	footpathModel = glm::translate(footpathModel, glm::vec3(-74.0f, 1.0f, 0.0f));
+	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 2.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
 	glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount); 
 
@@ -765,7 +743,7 @@ void display() {
 
 	// Road
 	glm::mat4 roadModel = glm::mat4(1.0f);
-	roadModel = glm::translate(roadModel, glm::vec3(-37.0f, 0.0f, -70.0f));
+	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
 	glDrawArrays(GL_TRIANGLES, 0, road_data.mPointCount);
 
@@ -780,13 +758,13 @@ void display() {
 
 	// Building 1 - 1
 	glm::mat4 building1Model = glm::mat4(1.0f);
-	building1Model = glm::translate(building1Model, glm::vec3(-92.0f, 0.0f, 20.0f));
+	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, 20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
 	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 
 	// Building 1 - 2
 	building1Model = glm::mat4(1.0f);
-	building1Model = glm::translate(building1Model, glm::vec3(-92.0f, 0.0f, -40.0f));
+	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -98.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
 	glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 
@@ -801,13 +779,7 @@ void display() {
 
 	// Building 2 - 1
 	glm::mat4 building2Model = glm::mat4(1.0f);
-	building2Model = glm::translate(building2Model, glm::vec3(-92.0f, 0.0f, -10.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
-
-	// Building 2 - 2
-	building2Model = glm::mat4(1.0f);
-	building2Model = glm::translate(building2Model, glm::vec3(-92.0f, 0.0f, -70.0f));
+	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -39.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
 	glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 
@@ -822,13 +794,13 @@ void display() {
 
 	// Building 3 - 1
 	glm::mat4 building3Model = glm::mat4(1.0f);
-	building3Model = glm::translate(building3Model, glm::vec3(-92.0f, 0.0f, 60.0f));
+	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 100.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
 	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 	
 	// Building 3 - 2
 	building3Model = glm::mat4(1.0f);
-	building3Model = glm::translate(building3Model, glm::vec3(-92.0f, 0.0f, 119.0f));
+	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 218.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
 	glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 
@@ -843,7 +815,7 @@ void display() {
 
 	// Grass
 	glm::mat4 grassModel = glm::mat4(1.0f);
-	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -6.0f, -20.0f));
+	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -12.0f, -20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
 	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
 
@@ -858,20 +830,21 @@ void display() {
 
 	// Bottle 1
 	glm::mat4 bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(8.0f, 12.0f, 70.0f));
-	bottleModel = glm::rotate(bottleModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	bottleModel = glm::translate(bottleModel, glm::vec3(-16.0f, 4.0f, 140.0f));
+	bottleModel = glm::rotate(bottleModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
 	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 
 	// Bottle 2
 	bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(-8.0f, 2.0f, 50.0f));
+	bottleModel = glm::translate(bottleModel, glm::vec3(-18.0f, 4.0f, 110.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
 	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 
 	// Bottle 3
 	bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(-2.0f, 2.0f, 30.0f));
+	bottleModel = glm::translate(bottleModel, glm::vec3(14.0f, 4.0f, 120.0f));
+	bottleModel = glm::rotate(bottleModel, glm::radians(-50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
 	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 
@@ -912,14 +885,12 @@ void init()
 	textureShaderProgramID = CompileShaders("./shaders/textureVertexShader.txt", "./shaders/textureFragmentShader.txt");
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
 	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
-	lightShaderProgramID = CompileShaders("./shaders/lightVertexShader.txt", "./shaders/lightFragmentShader.txt");
 	// generate Skybox and load Skybox images
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// Generate the rest of the Models (both with textures and without)
 	generateModels();
 	generateObjects();
-	addLight();
 }
 
 // Placeholder code for the keypress
@@ -1041,7 +1012,6 @@ void zoomCameraMovement(int button, int direction, int x, int y) {
 	}
 	if (cameraPosition.z < 220) {
 		if (cameraPosition.y + 2> 5) {
-			std::cout << cameraPosition.y << "           " << cameraPosition.z << ::endl;
 			// If the wheel direction is negative, zoom out
 			if (direction < 0) {
 				cameraPosition -= cameraSpeed * cameraFront;
