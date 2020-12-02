@@ -95,6 +95,7 @@ float fov = 45.0f;
 float delta;
 static DWORD last_time = 0;
 
+// ------------ KEY PRESS TOGGLE ------------
 bool keyC = false;
 bool keyO = false;
 
@@ -107,7 +108,6 @@ GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
 ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data;
-
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
 
