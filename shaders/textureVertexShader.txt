@@ -20,7 +20,7 @@ void main(){
   	texCoords = vertex_texture;
   	texCoords = texCoords * uvScalar;
 
-  	gl_Position = proj * view * model * vec4(fragPos,1.0);
+  	gl_Position = proj * view * vec4(fragPos,1.0);
 }
 
 
