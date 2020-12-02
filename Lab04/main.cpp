@@ -643,33 +643,37 @@ void display() {
 
 	// Front-right
 	glm::mat4 wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-80.0f, 5.0f, 25.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	wheelModel = carModel * wheelModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Front-left
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 25.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	wheelModel = carModel * wheelModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-right 
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-81.0f, 5.0f, 56.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	wheelModel = carModel * wheelModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
 	// Back-left
 	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-99.0f, 5.0f, 56.0f));
+	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	wheelModel = carModel * wheelModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
 	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
@@ -938,7 +942,7 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	// Use camera to move around the screen
 	case 'c':
-		if (!keyC) {
+		if (!keyC && !keyO) {
 			keyC = true;
 		}
 		else if (keyC) {
