@@ -118,6 +118,10 @@ unsigned int cubemapTexture;
 // ------------ CAR ------------
 unsigned int carVAO, carVBO1, carVBO2;
 unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
+glm::vec3 carPos1 = glm::vec3(-90.0f, 9.0f, 140.0f);
+glm::vec3 carPos2 = glm::vec3(-60.0f, 9.0f, -1000.0f);
+bool drawCar1 = true;
+bool drawCar2 = true;
 
 // ------------ TEXTURE ------------
 float uvScalar = 0;
@@ -618,6 +622,7 @@ void display() {
 	glUseProgram(objectShaderProgramID);
 	glBindVertexArray(carVAO);
 
+	float carSpeed = 100.0f * delta;
 	glm::vec3 objectColor = glm::vec3(0.0f, 0.5f, 0.5f);
 	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
@@ -628,55 +633,124 @@ void display() {
 	glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 
-	glm::mat4 carModel = glm::mat4(1.0f);
-	carModel = glm::translate(carModel, glm::vec3(-90.0f, 9.0f, 40.0f));
+	// Car 1
+	glm::mat4 car1Model = glm::mat4(1.0f);
+	car1Model = glm::translate(car1Model, carPos1);
+	carPos1 += carSpeed * cameraFront;
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(carModel));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car1Model));
 
+	if (carPos1.z > -370) {
+		glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
+	}
+	else {
+		drawCar1 = false;
+	}
+
+	// Car 2
+	objectColor = glm::vec3(0.5f, 0.0f, 0.1f);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	glm::mat4 car2Model = glm::mat4(1.0f);
+	car2Model = glm::translate(car2Model, carPos2);
+	car2Model = glm::rotate(car2Model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	carPos2 -= carSpeed * cameraFront;
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car2Model));
 	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
 
+	if (carPos2.z < 250) {
+		glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
+	}
+	else {
+		drawCar2 = false;
+	}
 	// ------------------------------------- WHEELS ------------------------------------- (object Shader)
 	glBindVertexArray(wheelsVAO);
 
-	objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
-	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	// Car 1
+	if (drawCar1) {
+		objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
+		glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
 
-	// Front-right
-	glm::mat4 wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	wheelModel = carModel * wheelModel;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-right
+		glm::mat4 wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-	// Front-left
-	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	wheelModel = carModel * wheelModel;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-	// Back-right 
-	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	wheelModel = carModel * wheelModel;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Back-right 
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-	// Back-left
-	wheelModel = glm::mat4(1.0f);
-	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	wheelModel = carModel * wheelModel;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Back-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	}
 
+	// Car 2
+	if (drawCar2) {
+		objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
+		glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+
+		// Front-right
+		glm::mat4 wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+
+		// Front-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+
+		// Back-right 
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+
+		// Back-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	}
+	
 	//------------------------------------- BIN ------------------------------------- (texture Shader)
 	glUseProgram(textureShaderProgramID);
 
