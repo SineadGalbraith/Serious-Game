@@ -48,6 +48,13 @@ MESH TO LOAD
 #define GRASS_MESH "./models/grass.dae"
 #define CAR_MESH "./models/car.obj"
 #define WHEEL_MESH "./models/wheel.dae"
+#define CHEST_MESH "./models/chest.obj"
+#define HEAD_MESH "./models/head.obj"
+#define HAIR_MESH "./models/hair.obj"
+#define LEFT_LEG_MESH "./models/leftLeg.dae"
+#define RIGHT_LEG_MESH "./models/rightLeg.dae"
+#define LEFT_FOOT_MESH "./models/leftFoot.dae"
+#define RIGHT_FOOT_MESH "./models/rightFoot.dae"
 #define BOTTLE_MESH "./models/bottle.dae"
 
 /*----------------------------------------------------------------------------
@@ -61,6 +68,11 @@ const char *building2 = "./textures/building2_texture.jpg";
 const char *building3 = "./textures/building3_texture.jpg";
 const char *grass = "./textures/grass_texture.jpg";
 const char *bottle = "./textures/bottle_texture.jpg";
+const char *chest = "./textures/chest_texture.jpg";
+const char *skin = "./textures/skin_texture.jpg";
+const char *jean = "./textures/legs_texture.jpg";
+const char *shoe = "./textures/shoe_texture.jpg";
+const char *hair = "./textures/hair_texture.jpg";
 
 #pragma region SimpleTypes
 typedef struct
@@ -78,7 +90,7 @@ int width = 800;
 int height = 600;
 
 // ------------ CAMERA ------------
-glm::vec3 cameraPosition = glm::vec3(0.0f, 20.0f, 220.0f);
+glm::vec3 cameraPosition = glm::vec3(0.0f, 17.0f, 220.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -107,7 +119,7 @@ const int i = 16;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data;
+ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data, chest_data, head_data, hair_data, leftLeg_data, rightLeg_data, leftFoot_data, rightFoot_data;
 GLuint loc1, loc2, loc3;
 GLfloat rotate_y = 0.0f;
 
@@ -136,6 +148,9 @@ glm::vec3 overheadUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 lastCameraPos;
 glm::vec3 lastCameraFront;
 glm::vec3 lastCameraUp;
+
+// ------------ FRED ------------
+glm::vec3 fredPos = glm::vec3(0.0f, 17.0f, 222.0f);
 
 vector<std::string> faces
 {
@@ -501,10 +516,39 @@ void generateModels() {
 	grass_data = load_mesh(GRASS_MESH);
 	dataArray.push_back(grass_data);
 	textureArray.push_back(grass);
+	// ------------ CHEST ------------
+	chest_data = load_mesh(CHEST_MESH);
+	dataArray.push_back(chest_data);
+	textureArray.push_back(chest);
+	// ------------ HEAD ------------
+	head_data = load_mesh(HEAD_MESH);
+	dataArray.push_back(head_data);
+	textureArray.push_back(skin);
+	// ------------ HAIR ------------
+	hair_data = load_mesh(HAIR_MESH);
+	dataArray.push_back(hair_data);
+	textureArray.push_back(hair);
+	// ------------ LEFT LEG ------------
+	leftLeg_data = load_mesh(LEFT_LEG_MESH);
+	dataArray.push_back(leftLeg_data);
+	textureArray.push_back(jean);
+	// ------------ RIGHT LEG ------------
+	rightLeg_data = load_mesh(RIGHT_LEG_MESH);
+	dataArray.push_back(rightLeg_data);
+	textureArray.push_back(jean);
+	// ------------ LEFT SHOE ------------
+	leftFoot_data = load_mesh(LEFT_FOOT_MESH);
+	dataArray.push_back(leftFoot_data);
+	textureArray.push_back(shoe);
+	// ------------ RIGHT SHOE ------------
+	rightFoot_data = load_mesh(RIGHT_FOOT_MESH);
+	dataArray.push_back(rightFoot_data);
+	textureArray.push_back(shoe);
 	// ------------ BOTTLE ------------
 	bottle_data = load_mesh(BOTTLE_MESH);
 	dataArray.push_back(bottle_data);
 	textureArray.push_back(bottle);
+	
 
 	generateObjectBufferMesh(dataArray, textureArray);
 }
@@ -788,7 +832,6 @@ void display() {
 	// Bin 1
 	glm::mat4 binModel = glm::mat4(1.0f);
 	binModel = glm::translate(binModel, glm::vec3(-20.0, 3.0, 135.0f));
-	//model = glm::rotate(model, glm::radians(rotate_y), glm::vec3(0.0f, 1.0f, 0.0f));
 	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
@@ -930,6 +973,123 @@ void display() {
 	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -12.0f, -20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
 	glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
+	
+	// ------------------------------------- CHEST ------------------------------------- (texture Shader)
+	//uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[7]);
+	glBindVertexArray(VAO[7]);
+
+	// Chest
+	glm::mat4 chestModel = glm::mat4(1.0f);
+	chestModel = glm::translate(chestModel, fredPos);
+	chestModel = glm::rotate(chestModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(chestModel));
+	glDrawArrays(GL_TRIANGLES, 0, chest_data.mPointCount);
+
+	// ------------------------------------- HEAD ------------------------------------- (texture Shader)
+	// uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[8]);
+	glBindVertexArray(VAO[8]);
+
+	// Head
+	glm::mat4 headModel = glm::mat4(1.0f);
+	headModel = glm::translate(headModel, glm::vec3(0.0f, 0.0f, 0.0f));
+	headModel = glm::rotate(headModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	headModel = chestModel * headModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(headModel));
+	glDrawArrays(GL_TRIANGLES, 0, head_data.mPointCount);
+
+	// ------------------------------------- HAIR ------------------------------------- (texture Shader)
+	// uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[9]);
+	glBindVertexArray(VAO[9]);
+
+	// Hair
+	glm::mat4 hairModel = glm::mat4(1.0f);
+	hairModel = glm::translate(hairModel, glm::vec3(0.0f, 0.0f, 0.0f));
+	hairModel = glm::rotate(hairModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	hairModel = headModel * hairModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(hairModel));
+	glDrawArrays(GL_TRIANGLES, 0, hair_data.mPointCount);
+
+	// ------------------------------------- LEFT LEG ------------------------------------- (texture Shader)
+	//uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[10]);
+	glBindVertexArray(VAO[10]);
+
+	// Left Leg
+	glm::mat4 leftLegModel = glm::mat4(1.0f);
+	leftLegModel = glm::translate(leftLegModel, glm::vec3(0.0f, -6.0f, 0.0f));
+	leftLegModel = glm::rotate(leftLegModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	leftLegModel = chestModel * leftLegModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(leftLegModel));
+	glDrawArrays(GL_TRIANGLES, 0, leftLeg_data.mPointCount);
+
+	// ------------------------------------- RIGHT LEG ------------------------------------- (texture Shader)
+	//uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[11]);
+	glBindVertexArray(VAO[11]);
+
+	// Right Leg
+	glm::mat4 rightLegModel = glm::mat4(1.0f);
+	rightLegModel = glm::translate(rightLegModel, glm::vec3(0.0f, -6.0f, 0.0f));
+	rightLegModel = chestModel * rightLegModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(rightLegModel));
+	glDrawArrays(GL_TRIANGLES, 0, rightLeg_data.mPointCount);
+
+	// ------------------------------------- LEFT FOOT ------------------------------------- (texture Shader)
+	//uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[12]);
+	glBindVertexArray(VAO[12]);
+
+	// Left Foot
+	glm::mat4 leftFootModel = glm::mat4(1.0f);
+	leftFootModel = glm::translate(leftFootModel, glm::vec3(-0.2f, -0.2f, 0.0f));
+	leftFootModel = glm::rotate(leftFootModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	leftFootModel = leftLegModel * leftFootModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(leftFootModel));
+	glDrawArrays(GL_TRIANGLES, 0, leftFoot_data.mPointCount);
+
+
+	// ------------------------------------- RIGHT FOOT ------------------------------------- (texture Shader)
+	//uvScalar
+	uvScalar = 10;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[13]);
+	glBindVertexArray(VAO[13]);
+
+	// Right Foot
+	glm::mat4 rightFootModel = glm::mat4(1.0f);
+	rightFootModel = glm::translate(rightFootModel, glm::vec3(-1.25f, -0.2f, 0.0f));
+	rightFootModel = rightLegModel * rightFootModel;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(rightFootModel));
+	glDrawArrays(GL_TRIANGLES, 0, rightFoot_data.mPointCount);
 
 	// ------------------------------------- BOTTLE ------------------------------------- (texture Shader)
 	// uvScalar
@@ -937,8 +1097,8 @@ void display() {
 	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
 
 	// Texture & VAO
-	glBindTexture(GL_TEXTURE_2D, VTO[7]);
-	glBindVertexArray(VAO[7]);
+	glBindTexture(GL_TEXTURE_2D, VTO[14]);
+	glBindVertexArray(VAO[14]);
 
 	// Bottle 1
 	glm::mat4 bottleModel = glm::mat4(1.0f);
@@ -966,7 +1126,6 @@ void display() {
 	bottleModel = glm::translate(bottleModel, glm::vec3(-8.0f, 2.0f, 50.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
 	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
-
 
 	// ---------------------------------------------------------------------------------
 
@@ -1013,6 +1172,7 @@ void keypress(unsigned char key, int x, int y) {
 	case 'a':
 		if (cameraPosition.x > -140 && !keyO) {
 			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+			fredPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
 	// Use camera to move around the screen
@@ -1027,7 +1187,8 @@ void keypress(unsigned char key, int x, int y) {
 	// Move Camera Right
 	case 'd':
 		if (cameraPosition.x < 20 && !keyO) {
-			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; 
+			fredPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
 	// Move Camera Down
@@ -1048,6 +1209,7 @@ void keypress(unsigned char key, int x, int y) {
 	case 's':
 		if (cameraPosition.z < 220 && !keyO) {
 			cameraPosition -= cameraSpeed * cameraFront;
+			fredPos -= cameraSpeed * cameraFront;
 		}
 		break;
 	// Move Camera Up
@@ -1060,6 +1222,7 @@ void keypress(unsigned char key, int x, int y) {
 	case 'w':
 		if (cameraPosition.z > -300 && !keyO) {
 			cameraPosition += cameraSpeed * cameraFront;
+			fredPos += cameraSpeed * cameraFront;
 		}
 		break;
 	// For button 'x' on the keyboard, the player will have the option to quit the game.
@@ -1075,7 +1238,6 @@ void keypress(unsigned char key, int x, int y) {
 		}
 		break;
 	}
-
 }
 
 // -------------------------- MOUSE CAMERA MOVEMENTS --------------------------
