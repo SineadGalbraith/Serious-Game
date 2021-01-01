@@ -45,8 +45,7 @@ public:
 	Model(const char* mesh);
 	Model::ModelData modelMesh;
 	std::vector < ModelData > getDataArray();
-	std::vector < ModelData > dataArray;
-	std::vector < std::string > textureArray;
+	std::vector < std::string > getTextureArray();
 private:
 	ModelData load_mesh(const char* file_name);
 };

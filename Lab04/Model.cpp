@@ -1,12 +1,13 @@
 #include "Model.h"
 
+std::vector < ModelData > dataArray;
+std::vector < std::string > textureArray;
 Model::Model() {
 
 }
 
 Model::Model(const char* mesh, const char* texture) {
 	modelMesh = load_mesh(mesh);
-	//std::cout << 'HERE' << std::endl;
 	dataArray.push_back(modelMesh);
 	textureArray.push_back(texture);
 }
@@ -19,6 +20,10 @@ Model::Model(const char* mesh) {
 
 std::vector < ModelData > Model::getDataArray() {
 	return dataArray;
+}
+
+std::vector < std::string > Model::getTextureArray() {
+	return textureArray;
 }
 
 #pragma region MESH LOADING
