@@ -1,5 +1,3 @@
-
-
 // Windows includes (For Time, IO, etc.)
 #include <windows.h>
 #include <mmsystem.h>
@@ -35,10 +33,11 @@
 // GLFW includes
 #include <GLFW\glfw3.h>
 
+#include "Model.h"
+Model model;
 /*----------------------------------------------------------------------------
 MESH TO LOAD
 ----------------------------------------------------------------------------*/
-
 #define BIN_MESH "./models/rubbishBinCircular.dae"
 #define FOOTPATH_MESH "./models/footpath.dae"
 #define ROAD_MESH "./models/road.dae"
@@ -74,16 +73,6 @@ const char *jean = "./textures/legs_texture.jpg";
 const char *shoe = "./textures/shoe_texture.jpg";
 const char *hair = "./textures/hair_texture.jpg";
 
-#pragma region SimpleTypes
-typedef struct
-{
-	size_t mPointCount = 0;
-	std::vector<vec3> mVertices;
-	std::vector<vec3> mNormals;
-	std::vector<vec2> mTextureCoords;
-} ModelData;
-#pragma endregion SimpleTypes
-
 using namespace std;
 
 int width = 800;
@@ -92,6 +81,7 @@ int height = 600;
 // ------------ CAMERA ------------
 glm::vec3 cameraPosition = glm::vec3(0.0f, 17.0f, 220.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 startingCameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 cameraRight = glm::vec3(0.0f);
@@ -109,7 +99,9 @@ static DWORD last_time = 0;
 
 // ------------ KEY PRESS TOGGLE ------------
 bool keyC = false;
+bool keyM = false;
 bool keyO = false;
+bool keyP = false;
 
 // ------------ SHADER ------------
 GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
@@ -120,7 +112,7 @@ GLuint VAO[i], VBO[i * 3], VTO[i];
 
 // ------------ MESH SETUP ------------
 ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data, chest_data, head_data, hair_data, leftLeg_data, rightLeg_data, leftFoot_data, rightFoot_data;
-GLuint loc1, loc2, loc3;
+
 GLfloat rotate_y = 0.0f;
 
 // ------------ SKYBOX ------------
@@ -152,6 +144,35 @@ glm::vec3 lastCameraUp;
 // ------------ FRED ------------
 glm::vec3 fredPos = glm::vec3(0.0f, 17.0f, 222.0f);
 
+// ------------ SCORE ------------
+int playerScore = 0;
+
+// ------------ INVENTORY ------------
+bool pressP = false;
+int bottleInventory = 0;
+int rubbishInventory = 0;
+
+// ------------ BOTTLES ------------
+bool bottle1 = true;
+bool bottle2 = true;
+bool bottle3 = true;
+bool bottle4 = true;
+glm::vec3 bottle1Pos = glm::vec3(-16.0f, 3.8f, 140.0f);
+glm::vec3 bottle2Pos = glm::vec3(-18.0f, 3.8f, 110.0f);
+glm::vec3 bottle3Pos = glm::vec3(14.0f, 3.8f, 120.0f);
+glm::vec3 bottle4Pos = glm::vec3(-8.0f, 3.8f, 50.0f);
+
+// ------------ BINS ------------
+bool pressM = false;
+glm::vec3 bin1Pos = glm::vec3(-20.0, 3.0, 135.0f);
+glm::vec3 bin2Pos = glm::vec3(20.0, 3.0, 20.0f);
+glm::vec3 bin3Pos = glm::vec3(-20.0, 3.0, -100.0f);
+glm::vec3 bin4Pos = glm::vec3(20.0, 3.0, -220.0f);
+
+
+
+GLuint loc1, loc2, loc3;
+//GLuint VAO[16], VBO[16 * 3], VTO[16];
 vector<std::string> faces
 {
 	"./skybox/right.bmp",
@@ -205,66 +226,6 @@ float skyboxVertices[] = {
 	-500.0f, -500.0f,  500.0f,
 	 500.0f, -500.0f,  500.0f
 };
-
-
-#pragma region MESH LOADING
-/*----------------------------------------------------------------------------
-MESH LOADING FUNCTION
-----------------------------------------------------------------------------*/
-
-ModelData load_mesh(const char* file_name) {
-	ModelData modelData;
-
-	/* Use assimp to read the model file, forcing it to be read as    */
-	/* triangles. The second flag (aiProcess_PreTransformVertices) is */
-	/* relevant if there are multiple meshes in the model file that   */
-	/* are offset from the origin. This is pre-transform them so      */
-	/* they're in the right position.                                 */
-	const aiScene* scene = aiImportFile(
-		file_name,
-		aiProcess_Triangulate | aiProcess_PreTransformVertices
-	);
-
-	if (!scene) {
-		fprintf(stderr, "ERROR: reading mesh %s\n", file_name);
-		return modelData;
-	}
-
-	printf("  %i materials\n", scene->mNumMaterials);
-	printf("  %i meshes\n", scene->mNumMeshes);
-	printf("  %i textures\n", scene->mNumTextures);
-
-	for (unsigned int m_i = 0; m_i < scene->mNumMeshes; m_i++) {
-		const aiMesh* mesh = scene->mMeshes[m_i];
-		printf("    %i vertices in mesh\n", mesh->mNumVertices);
-		modelData.mPointCount += mesh->mNumVertices;
-		for (unsigned int v_i = 0; v_i < mesh->mNumVertices; v_i++) {
-			if (mesh->HasPositions()) {
-				const aiVector3D* vp = &(mesh->mVertices[v_i]);
-				modelData.mVertices.push_back(vec3(vp->x, vp->y, vp->z));
-			}
-			if (mesh->HasNormals()) {
-				const aiVector3D* vn = &(mesh->mNormals[v_i]);
-				modelData.mNormals.push_back(vec3(vn->x, vn->y, vn->z));
-			}
-			if (mesh->HasTextureCoords(0)) {
-				const aiVector3D* vt = &(mesh->mTextureCoords[0][v_i]);
-				modelData.mTextureCoords.push_back(vec2(vt->x, vt->y));
-			}
-			if (mesh->HasTangentsAndBitangents()) {
-				/* You can extract tangents and bitangents here              */
-				/* Note that you might need to make Assimp generate this     */
-				/* data for you. Take a look at the flags that aiImportFile  */
-				/* can take.                                                 */
-			}
-		}
-	}
-
-	aiReleaseImport(scene);
-	return modelData;
-}
-
-#pragma endregion MESH LOADING
 
 // Shader Functions- click on + to expand
 #pragma region SHADER_FUNCTIONS
@@ -404,6 +365,11 @@ unsigned int loadCubemap(vector<std::string> faces)
 	return textureID;
 }
 
+
+#pragma endregion TEXTURE_FUNCTIONS
+// VBO Functions - click on + to expand
+#pragma region VBO_FUNCTIONS
+
 void loadTexture(const char* texture, int i) {
 	glGenTextures(1, &VTO[i]);
 
@@ -429,9 +395,7 @@ void loadTexture(const char* texture, int i) {
 
 	stbi_image_free(data);
 }
-#pragma endregion TEXTURE_FUNCTIONS
-// VBO Functions - click on + to expand
-#pragma region VBO_FUNCTIONS
+
 void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <std::string> textureArray) {
 
 	int width, height, nrChannels;
@@ -453,12 +417,12 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter]);
 			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mVertices[0], GL_STATIC_DRAW);
 
-			glGenBuffers(1, &VBO[counter+1]);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+1]);
+			glGenBuffers(1, &VBO[counter + 1]);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 1]);
 			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec3), &dataArray[i].mNormals[0], GL_STATIC_DRAW);
 
 			glGenBuffers(1, &VBO[counter + 2]);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter+2]);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO[counter + 2]);
 			glBufferData(GL_ARRAY_BUFFER, dataArray[i].mPointCount * sizeof(vec2), &dataArray[i].mTextureCoords[0], GL_STATIC_DRAW);
 
 			glGenVertexArrays(1, &VAO[i]);
@@ -483,74 +447,96 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 	}
 }
 
+
+#pragma endregion VBO_FUNCTIONS
+
 void generateModels() {
+	std::cout << 'HERE' << std::endl;
+	Model bin_data(BIN_MESH, bin);
+	Model footpath_data(FOOTPATH_MESH, footpath);
+	Model road_data(ROAD_MESH, road);
+	Model building1_data(BUILDING1_MESH, building1);
+	Model building2_data(BUILDING2_MESH, building2);
+	Model building3_data(BUILDING3_MESH, building3);
+	Model grass_data(GRASS_MESH, grass);
+	Model chest_data(CHEST_MESH, chest);
+	Model head_data(HEAD_MESH, skin);
+	Model hair_data(HAIR_MESH, hair);
+	Model leftLeg_data(LEFT_LEG_MESH, jean);
+	Model rightLeg_data(RIGHT_LEG_MESH, jean);
+	Model leftFoot_data(LEFT_FOOT_MESH, shoe);
+	Model rightFoot_data(RIGHT_FOOT_MESH, shoe);
+	Model bottle_data(BOTTLE_MESH, bottle);
+	Model car_data(CAR_MESH);
+	Model wheel_data(WHEEL_MESH);
 
-	std::vector < ModelData > dataArray;
-	std::vector < std::string > textureArray;
+	/*std::vector < ModelData > data = model.getDataArray();
+	std::cout << size(data) << std::endl;*/
+	//generateObjectBufferMesh(dataArray, textureArray);
 
-	// ------------ BIN ------------
-	bin_data = load_mesh(BIN_MESH);
-	dataArray.push_back(bin_data);
-	textureArray.push_back(bin);
-	// ------------ FOOTPATH ------------
-	footpath_data = load_mesh(FOOTPATH_MESH);
-	dataArray.push_back(footpath_data);
-	textureArray.push_back(footpath);
-	// ------------ ROAD ------------
-	road_data = load_mesh(ROAD_MESH);
-	dataArray.push_back(road_data);
-	textureArray.push_back(road);
-	// ------------ BUILDING1 ------------
-	building1_data = load_mesh(BUILDING1_MESH);
-	dataArray.push_back(building1_data);
-	textureArray.push_back(building1);
-	// ------------ BUILDING2 ------------
-	building2_data = load_mesh(BUILDING2_MESH);
-	dataArray.push_back(building2_data);
-	textureArray.push_back(building2);
-	// ------------ BUILDING3 ------------
-	building3_data = load_mesh(BUILDING3_MESH);
-	dataArray.push_back(building3_data);
-	textureArray.push_back(building3);
-	// ------------ GRASS ------------
-	grass_data = load_mesh(GRASS_MESH);
-	dataArray.push_back(grass_data);
-	textureArray.push_back(grass);
-	// ------------ CHEST ------------
-	chest_data = load_mesh(CHEST_MESH);
-	dataArray.push_back(chest_data);
-	textureArray.push_back(chest);
-	// ------------ HEAD ------------
-	head_data = load_mesh(HEAD_MESH);
-	dataArray.push_back(head_data);
-	textureArray.push_back(skin);
-	// ------------ HAIR ------------
-	hair_data = load_mesh(HAIR_MESH);
-	dataArray.push_back(hair_data);
-	textureArray.push_back(hair);
-	// ------------ LEFT LEG ------------
-	leftLeg_data = load_mesh(LEFT_LEG_MESH);
-	dataArray.push_back(leftLeg_data);
-	textureArray.push_back(jean);
-	// ------------ RIGHT LEG ------------
-	rightLeg_data = load_mesh(RIGHT_LEG_MESH);
-	dataArray.push_back(rightLeg_data);
-	textureArray.push_back(jean);
-	// ------------ LEFT SHOE ------------
-	leftFoot_data = load_mesh(LEFT_FOOT_MESH);
-	dataArray.push_back(leftFoot_data);
-	textureArray.push_back(shoe);
-	// ------------ RIGHT SHOE ------------
-	rightFoot_data = load_mesh(RIGHT_FOOT_MESH);
-	dataArray.push_back(rightFoot_data);
-	textureArray.push_back(shoe);
-	// ------------ BOTTLE ------------
-	bottle_data = load_mesh(BOTTLE_MESH);
-	dataArray.push_back(bottle_data);
-	textureArray.push_back(bottle);
-	
+	//std::vector < ModelData > dataArray;
+	//std::vector < std::string > textureArray;
 
-	generateObjectBufferMesh(dataArray, textureArray);
+	//// ------------ BIN ------------
+	//bin_data = load_mesh(BIN_MESH);
+	//dataArray.push_back(bin_data);
+	//textureArray.push_back(bin);
+	//// ------------ FOOTPATH ------------
+	//footpath_data = load_mesh(FOOTPATH_MESH);
+	//dataArray.push_back(footpath_data);
+	//textureArray.push_back(footpath);
+	//// ------------ ROAD ------------
+	//road_data = load_mesh(ROAD_MESH);
+	//dataArray.push_back(road_data);
+	//textureArray.push_back(road);
+	//// ------------ BUILDING1 ------------
+	//building1_data = load_mesh(BUILDING1_MESH);
+	//dataArray.push_back(building1_data);
+	//textureArray.push_back(building1);
+	//// ------------ BUILDING2 ------------
+	//building2_data = load_mesh(BUILDING2_MESH);
+	//dataArray.push_back(building2_data);
+	//textureArray.push_back(building2);
+	//// ------------ BUILDING3 ------------
+	//building3_data = load_mesh(BUILDING3_MESH);
+	//dataArray.push_back(building3_data);
+	//textureArray.push_back(building3);
+	//// ------------ GRASS ------------
+	//grass_data = load_mesh(GRASS_MESH);
+	//dataArray.push_back(grass_data);
+	//textureArray.push_back(grass);
+	//// ------------ CHEST ------------
+	//chest_data = load_mesh(CHEST_MESH);
+	//dataArray.push_back(chest_data);
+	//textureArray.push_back(chest);
+	//// ------------ HEAD ------------
+	//head_data = load_mesh(HEAD_MESH);
+	//dataArray.push_back(head_data);
+	//textureArray.push_back(skin);
+	//// ------------ HAIR ------------
+	//hair_data = load_mesh(HAIR_MESH);
+	//dataArray.push_back(hair_data);
+	//textureArray.push_back(hair);
+	//// ------------ LEFT LEG ------------
+	//leftLeg_data = load_mesh(LEFT_LEG_MESH);
+	//dataArray.push_back(leftLeg_data);
+	//textureArray.push_back(jean);
+	//// ------------ RIGHT LEG ------------
+	//rightLeg_data = load_mesh(RIGHT_LEG_MESH);
+	//dataArray.push_back(rightLeg_data);
+	//textureArray.push_back(jean);
+	//// ------------ LEFT SHOE ------------
+	//leftFoot_data = load_mesh(LEFT_FOOT_MESH);
+	//dataArray.push_back(leftFoot_data);
+	//textureArray.push_back(shoe);
+	//// ------------ RIGHT SHOE ------------
+	//rightFoot_data = load_mesh(RIGHT_FOOT_MESH);
+	//dataArray.push_back(rightFoot_data);
+	//textureArray.push_back(shoe);
+	//// ------------ BOTTLE ------------
+	//bottle_data = load_mesh(BOTTLE_MESH);
+	//dataArray.push_back(bottle_data);
+	//textureArray.push_back(bottle);
 }
 
 void generateSkybox() {
@@ -563,64 +549,63 @@ void generateSkybox() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
 
-void generateObjects() {
-	car_data = load_mesh(CAR_MESH);
-	wheel_data = load_mesh(WHEEL_MESH);
-
-	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
-
-	// -------------------------------- CAR --------------------------------
-	glGenVertexArrays(1, &carVAO);
-	glGenBuffers(1, &carVBO1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
-	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mVertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &carVBO2);
-	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
-	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mNormals[0], GL_STATIC_DRAW);
-
-	glBindVertexArray(carVAO);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	// -------------------------------- WHEEL --------------------------------
-	glGenVertexArrays(1, &wheelsVAO);
-	glGenBuffers(1, &wheelsVBO1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
-	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mVertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &wheelsVBO2);
-	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
-	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mNormals[0], GL_STATIC_DRAW);
-
-	glBindVertexArray(wheelsVAO);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-}
+//void generateObjects() {
+//	/*car_data = load_mesh(CAR_MESH);
+//	wheel_data = load_mesh(WHEEL_MESH);*/
+//
+//	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
+//	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
+//
+//	// -------------------------------- CAR --------------------------------
+//	glGenVertexArrays(1, &carVAO);
+//	glGenBuffers(1, &carVBO1);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
+//	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mVertices[0], GL_STATIC_DRAW);
+//
+//	glGenBuffers(1, &carVBO2);
+//	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
+//	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mNormals[0], GL_STATIC_DRAW);
+//
+//	glBindVertexArray(carVAO);
+//
+//	glEnableVertexAttribArray(loc1);
+//	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
+//	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+//
+//	glEnableVertexAttribArray(loc2);
+//	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
+//	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+//
+//	// -------------------------------- WHEEL --------------------------------
+//	glGenVertexArrays(1, &wheelsVAO);
+//	glGenBuffers(1, &wheelsVBO1);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
+//	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mVertices[0], GL_STATIC_DRAW);
+//
+//	glGenBuffers(1, &wheelsVBO2);
+//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
+//	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mNormals[0], GL_STATIC_DRAW);
+//
+//	glBindVertexArray(wheelsVAO);
+//
+//	glEnableVertexAttribArray(loc1);
+//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
+//	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+//
+//	glEnableVertexAttribArray(loc2);
+//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
+//	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+//}
 
 #pragma endregion VBO_FUNCTIONS
 
 void display() {
-
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glActiveTexture(GL_TEXTURE0);
-
+	pressP = false;
 	glDepthFunc(GL_LESS); 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
@@ -680,7 +665,7 @@ void display() {
 	// Car 1
 	glm::mat4 car1Model = glm::mat4(1.0f);
 	car1Model = glm::translate(car1Model, carPos1);
-	carPos1 += carSpeed * cameraFront;
+	carPos1 += carSpeed * startingCameraFront;
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car1Model));
 
@@ -692,7 +677,7 @@ void display() {
 	}
 
 	// Car 2
-	objectColor = glm::vec3(0.5f, 0.0f, 0.1f);
+	/*objectColor = glm::vec3(0.5f, 0.0f, 0.1f);
 	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
 	glm::mat4 car2Model = glm::mat4(1.0f);
 	car2Model = glm::translate(car2Model, carPos2);
@@ -707,7 +692,7 @@ void display() {
 	}
 	else {
 		drawCar2 = false;
-	}
+	}*/
 
 	// ------------------------------------- WHEELS ------------------------------------- (object Shader)
 	glBindVertexArray(wheelsVAO);
@@ -755,46 +740,46 @@ void display() {
 	}
 
 	// Car 2
-	if (drawCar2) {
-		objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
-		glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	//if (drawCar2) {
+	//	objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
+	//	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
 
-		// Front-right
-		glm::mat4 wheelModel = glm::mat4(1.0f);
-		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-		wheelModel = car2Model * wheelModel;
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	//	// Front-right
+	//	glm::mat4 wheelModel = glm::mat4(1.0f);
+	//	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	//	wheelModel = car2Model * wheelModel;
+	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-		// Front-left
-		wheelModel = glm::mat4(1.0f);
-		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-		wheelModel = car2Model * wheelModel;
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	//	// Front-left
+	//	wheelModel = glm::mat4(1.0f);
+	//	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	//	wheelModel = car2Model * wheelModel;
+	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-		// Back-right 
-		wheelModel = glm::mat4(1.0f);
-		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-		wheelModel = car2Model * wheelModel;
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	//	// Back-right 
+	//	wheelModel = glm::mat4(1.0f);
+	//	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	//	wheelModel = car2Model * wheelModel;
+	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
 
-		// Back-left
-		wheelModel = glm::mat4(1.0f);
-		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-		wheelModel = car2Model * wheelModel;
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-		glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
-	}
+	//	// Back-left
+	//	wheelModel = glm::mat4(1.0f);
+	//	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+	//	wheelModel = car2Model * wheelModel;
+	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+	//}
 	
 	//------------------------------------- BIN ------------------------------------- (texture Shader)
 	glUseProgram(textureShaderProgramID);
@@ -829,28 +814,35 @@ void display() {
 	glBindTexture(GL_TEXTURE_2D, VTO[0]);
 	glBindVertexArray(VAO[0]);
 
+	if ((fredPos.z - bin1Pos.z < 50) || (fredPos.z - bottle2Pos.z < 50) || (fredPos.z - bottle3Pos.z < 50) || (fredPos.z - bottle4Pos.z < 50)) {
+		pressM = true;
+	}
+	else {
+		pressM = false;
+	}
+
 	// Bin 1
 	glm::mat4 binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(-20.0, 3.0, 135.0f));
+	binModel = glm::translate(binModel, bin1Pos);
 	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
 	// Bin 2
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(20.0, 3.0, 20.0f));
+	binModel = glm::translate(binModel, bin2Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
 	// Bin 3
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(-20.0, 3.0, -100.0f));
+	binModel = glm::translate(binModel, bin3Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
 	// Bin 4
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, glm::vec3(20.0, 3.0, -220.0f));
+	binModel = glm::translate(binModel, bin4Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
 	glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 
@@ -1099,33 +1091,115 @@ void display() {
 	// Texture & VAO
 	glBindTexture(GL_TEXTURE_2D, VTO[14]);
 	glBindVertexArray(VAO[14]);
+	if ((bottle1 && (fredPos.z - bottle1Pos.z < 50)) || (bottle2 && (fredPos.z - bottle2Pos.z < 50)) || (bottle3 && (fredPos.z - bottle3Pos.z < 50)) || 
+		(bottle4 && (fredPos.z - bottle4Pos.z < 50))) {
+		pressP = true;
+	}
+	else {
+		pressP = false;
+	}
 
-	// Bottle 1
 	glm::mat4 bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(-16.0f, 4.0f, 140.0f));
-	bottleModel = glm::rotate(bottleModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	// Bottle 1
+	if ((keyP && (fredPos.z - bottle1Pos.z < 50)) && bottle1) {
+		bottleInventory++;
+		bottle1 = false;
+		pressP = false;
+		keyP = false;
+	}
+	else if (bottle1) {
+		bottleModel = glm::translate(bottleModel, bottle1Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	}
 
 	// Bottle 2
-	bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(-18.0f, 4.0f, 110.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	if (keyP && (fredPos.z - bottle2Pos.z < 50) && bottle2) {
+		bottleInventory++;
+		bottle2 = false;
+		pressP = false;
+		keyP = false;
+	}
+	else if (bottle2) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle2Pos);
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	}
 
+	//std::cout << bottleInventory << std::endl;
+	
 	// Bottle 3
-	bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(14.0f, 4.0f, 120.0f));
-	bottleModel = glm::rotate(bottleModel, glm::radians(-50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
-
+	if ((keyP && (fredPos.z - bottle3Pos.z < 50)) && bottle3) {
+		bottleInventory++;
+		bottle3 = false;
+		pressP = false;
+		keyP = false;
+	}
+	else if (bottle3) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle3Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(-50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	}
 
 	// Bottle 4
-	bottleModel = glm::mat4(1.0f);
-	bottleModel = glm::translate(bottleModel, glm::vec3(-8.0f, 2.0f, 50.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-	glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	if ((keyP && (fredPos.z - bottle4Pos.z < 50)) && bottle4) {
+		bottleInventory++;
+		bottle4 = false;
+		pressP = false;
+		keyP = false;
+	}
+	else if (bottle4) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle4Pos);
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
+	}
+
+	// ------------------------------------- End Game ------------------------------------- 
+
+	if (fredPos.z <= -230) {
+		std::string score = "Final Score:\n " + std::to_string(playerScore);
+		LPCSTR sw = score.c_str();
+		int messageBoxID = MessageBox(NULL, sw, "Game Over", MB_OK);
+		switch (messageBoxID) {
+		case IDOK:
+			exit(0);
+		}
+	}
+
+	// ------------------------------------- SCORE BOX ------------------------------------- 
+
+	//glBegin(GL_QUADS);              
+	//glColor3f(1.0f, 1.0f, 1.0f); // White
+	//glVertex2f(cameraPosition.x + 20, cameraPosition.y + 15);     // Define vertices in counter-clockwise (CCW) order
+	//glVertex2f(cameraPosition.x + 16, cameraPosition.y + 15);     //  so that the normal (front-face) is facing you
+	//glVertex2f(cameraPosition.x + 16, cameraPosition.y + 10);
+	//glVertex2f(cameraPosition.x + 20, cameraPosition.y + 10);
+
+	//glVertex2f(-0.8f, 16.0f);     // Define vertices in counter-clockwise (CCW) order
+	//glVertex2f(-0.2f, 16.0f);     //  so that the normal (front-face) is facing you
+	//glVertex2f(-0.2f, 16.6f);
+	//glVertex2f(-0.8f, 16.6f);
+
+	//glColor3f(0.0f, 1.0f, 0.0f); // Green
+	//glVertex2f(-0.7f, -0.6f);
+	//glVertex2f(-0.1f, -0.6f);
+	//glVertex2f(-0.1f, 0.0f);
+	//glVertex2f(-0.7f, 0.0f);
+
+	//glColor3f(0.2f, 0.2f, 0.2f); // Dark Gray
+	//glVertex2f(-0.9f, -0.7f);
+	//glColor3f(1.0f, 1.0f, 1.0f); // White
+	//glVertex2f(-0.5f, -0.7f);
+	//glColor3f(0.2f, 0.2f, 0.2f); // Dark Gray
+	//glVertex2f(-0.5f, -0.3f);
+	//glColor3f(1.0f, 1.0f, 1.0f); // White
+	//glVertex2f(-0.9f, -0.3f);
+	glEnd();
 
 	// ---------------------------------------------------------------------------------
 
@@ -1157,25 +1231,40 @@ void init()
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
 	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
 	// generate Skybox and load Skybox images
+	std::cout << 'HERE' << std::endl;
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
 	// Generate the rest of the Models (both with textures and without)
 	generateModels();
-	generateObjects();
+	//generateObjects();
+	//std::cout << model.getDataArray << std::endl;
 }
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int x, int y) {
 	float cameraSpeed = 300.0f * delta;
+	int messageBoxID;
+	std::string s = "Bottles: " + std::to_string(bottleInventory);
+	LPCSTR sw = s.c_str();
+	std::string score = "Score: " + std::to_string(playerScore);
+	LPCSTR scores = score.c_str();
 	switch (key) {
-	// Move Camera Left
+		// Move Camera Left
 	case 'a':
 		if (cameraPosition.x > -140 && !keyO) {
 			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			fredPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
-	// Use camera to move around the screen
+		// Show Score
+	case 'b':
+		messageBoxID = MessageBox(NULL, scores, "Score", MB_OK);
+		switch (messageBoxID) {
+		case IDOK:
+			break;
+		}
+		break;
+		// Use camera to move around the screen
 	case 'c':
 		if (!keyC && !keyO) {
 			keyC = true;
@@ -1184,20 +1273,38 @@ void keypress(unsigned char key, int x, int y) {
 			keyC = false;
 		}
 		break;
-	// Move Camera Right
+		// Move Camera Right
 	case 'd':
 		if (cameraPosition.x < 20 && !keyO) {
-			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; 
+			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			fredPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
-	// Move Camera Down
+		// Inventory
+	case 'i':
+		messageBoxID = MessageBox(NULL, sw, "Inventory", MB_OK);
+		switch (messageBoxID) {
+		case IDOK:
+			break;
+		}
+		break;
+		// Move Camera Down
 	case 'j':
 		if (cameraPosition.y >= 10 && !keyO) {
 			cameraPosition -= cameraSpeed * up;
 		}
 		break;
-	// Overhead View
+	case 'm':
+		if (pressM && (bottleInventory != 0)) {
+			keyM = true;
+			playerScore += bottleInventory;
+			bottleInventory = 0;
+		}
+		else if (!pressM) {
+			keyM = false;
+		}
+		break;
+		// Overhead View
 	case 'o':
 		if (!keyO) {
 			keyO = true;
@@ -1205,29 +1312,44 @@ void keypress(unsigned char key, int x, int y) {
 		else if (keyO) {
 			keyO = false;
 		}
-	// Move Camera Backwards
+		break;
+		// Pick up item
+	case 'p':
+		if (pressP) {
+			keyP = true;
+		}
+		else if (!pressP) {
+			keyP = false;
+		}
+		break;
+		// Move Camera Backwards
+	// Reset camera to Fred's position
+	case 'r':
+		glm::vec3 newFredPos = glm::vec3(fredPos.x, fredPos.y, fredPos.z - 2);
+		cameraPosition = newFredPos;
+		break;
 	case 's':
 		if (cameraPosition.z < 220 && !keyO) {
 			cameraPosition -= cameraSpeed * cameraFront;
 			fredPos -= cameraSpeed * cameraFront;
 		}
 		break;
-	// Move Camera Up
+		// Move Camera Up
 	case 'u':
 		if (cameraPosition.y < 30 && !keyO) {
 			cameraPosition += cameraSpeed * up;
 		}
 		break;
-	// Move Camera Forwards
+		// Move Camera Forwards
 	case 'w':
 		if (cameraPosition.z > -300 && !keyO) {
 			cameraPosition += cameraSpeed * cameraFront;
 			fredPos += cameraSpeed * cameraFront;
 		}
 		break;
-	// For button 'x' on the keyboard, the player will have the option to quit the game.
+		// For button 'x' on the keyboard, the player will have the option to quit the game.
 	case 'x':
-		int messageBoxID = MessageBox(NULL, "Do you want to quit the game?", "Menu", MB_YESNO | MB_ICONQUESTION);
+		messageBoxID = MessageBox(NULL, "Do you want to quit the game?", "Menu", MB_YESNO | MB_ICONQUESTION);
 
 		switch (messageBoxID) {
 		case IDYES:
