@@ -2,6 +2,7 @@
 
 std::vector < ModelData > dataArray;
 std::vector < std::string > textureArray;
+std::vector < ModelData > nonTextureObjects;
 Model::Model() {
 
 }
@@ -14,9 +15,8 @@ Model::Model(const char* mesh, const char* texture) {
 
 Model::Model(const char* mesh) {
 	modelMesh = load_mesh(mesh);
-	dataArray.push_back(modelMesh);
+	nonTextureObjects.push_back(modelMesh);
 }
-
 
 std::vector < ModelData > Model::getDataArray() {
 	return dataArray;
@@ -24,6 +24,10 @@ std::vector < ModelData > Model::getDataArray() {
 
 std::vector < std::string > Model::getTextureArray() {
 	return textureArray;
+}
+
+std::vector < ModelData > Model::getNonTextureObjects() {
+	return nonTextureObjects;
 }
 
 #pragma region MESH LOADING

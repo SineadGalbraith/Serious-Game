@@ -2,21 +2,7 @@
 
 // Windows includes (For Time, IO, etc.)
 #include <windows.h>
-#include <mmsystem.h>
-#include <iostream>
-#include <string>
-//#include <stdio.h>
-#include <math.h>
-#include <vector> // STL dynamic memory.
-
-// OpenGL includes
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-
-//Include GLM functions
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <vector> 
 
 // Assimp includes
 #include <assimp/cimport.h> // scene importer
@@ -26,10 +12,6 @@
 // Project includes
 #include "maths_funcs.h"
 
-//#include <glm/gtx/string_cast.hpp>
-
-// GLFW includes
-#include <GLFW\glfw3.h>
 typedef struct
 {
 	size_t mPointCount = 0;
@@ -45,7 +27,8 @@ public:
 	Model(const char* mesh);
 	Model::ModelData modelMesh;
 	std::vector < ModelData > getDataArray();
-	std::vector < std::string > getTextureArray();
+	std::vector < std::string > getTextureArray(); 
+	std::vector < ModelData > getNonTextureObjects();
 private:
 	ModelData load_mesh(const char* file_name);
 };

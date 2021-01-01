@@ -108,7 +108,9 @@ GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
 
 // ------------ VBO/VAO SETUP ------------
 const int i = 16;
+const int j = 3;
 GLuint VAO[i], VBO[i * 3], VTO[i];
+GLuint objectsVAO[j], objectsVBO[j * 3];
 
 // ------------ MESH SETUP ------------
 ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data, chest_data, head_data, hair_data, leftLeg_data, rightLeg_data, leftFoot_data, rightFoot_data;
@@ -120,8 +122,6 @@ unsigned int skyboxVAO, skyboxVBO;
 unsigned int cubemapTexture;
 
 // ------------ CAR ------------
-unsigned int carVAO, carVBO1, carVBO2;
-unsigned int wheelsVAO, wheelsVBO1, wheelsVBO2;
 glm::vec3 carPos1 = glm::vec3(-90.0f, 9.0f, 5000.0f);
 glm::vec3 carPos2 = glm::vec3(-60.0f, 9.0f, -10000.0f);
 bool drawCar1 = true;
@@ -177,7 +177,7 @@ GLuint loc1, loc2, loc3;
 
 std::vector < ModelData > meshData;
 std::vector < std::string > textures;
-
+std::vector < ModelData > nonTextureModels;
 
 vector<std::string> faces
 {
@@ -452,6 +452,38 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 	}
 }
 
+void generateNonTextureObjects(std::vector <ModelData> nonTextureObjects) {
+	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
+	
+	int width, height, nrChannels;
+	unsigned char *data;
+	int counter = 0;
+
+	for (int i = 0; i < nonTextureObjects.size(); i++) {
+		glGenBuffers(1, &objectsVBO[counter]);
+		glBindBuffer(GL_ARRAY_BUFFER, objectsVBO[counter]);
+		glBufferData(GL_ARRAY_BUFFER, nonTextureObjects[i].mPointCount * sizeof(vec3), &nonTextureObjects[i].mVertices[0], GL_STATIC_DRAW);
+
+		glGenBuffers(1, &objectsVBO[counter + 1]);
+		glBindBuffer(GL_ARRAY_BUFFER, objectsVBO[counter + 1]);
+		glBufferData(GL_ARRAY_BUFFER, nonTextureObjects[i].mPointCount * sizeof(vec3), &nonTextureObjects[i].mNormals[0], GL_STATIC_DRAW);
+
+		glGenVertexArrays(1, &objectsVAO[i]);
+		glBindVertexArray(objectsVAO[i]);
+
+		glEnableVertexAttribArray(loc1);
+		glBindBuffer(GL_ARRAY_BUFFER, objectsVBO[counter]);
+		glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+		glEnableVertexAttribArray(loc2);
+		glBindBuffer(GL_ARRAY_BUFFER, objectsVBO[counter + 1]);
+		glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+		counter += 2;
+	}
+}
+
 
 #pragma endregion VBO_FUNCTIONS
 
@@ -471,78 +503,15 @@ void generateModels() {
 	Model leftFoot_data(LEFT_FOOT_MESH, shoe);
 	Model rightFoot_data(RIGHT_FOOT_MESH, shoe);
 	Model bottle_data(BOTTLE_MESH, bottle);
-	/*Model car_data(CAR_MESH);
-	Model wheel_data(WHEEL_MESH);*/
+	Model car_data(CAR_MESH);
+	Model wheel_data(WHEEL_MESH);
 
 	meshData = model.getDataArray();
 	textures = model.getTextureArray();
+	nonTextureModels = model.getNonTextureObjects();
 
 	generateObjectBufferMesh(meshData, textures);
-	//generateObjectBufferMesh(dataArray, textureArray);
-
-	//std::vector < ModelData > dataArray;
-	//std::vector < std::string > textureArray;
-
-	//// ------------ BIN ------------
-	//bin_data = load_mesh(BIN_MESH);
-	//dataArray.push_back(bin_data);
-	//textureArray.push_back(bin);
-	//// ------------ FOOTPATH ------------
-	//footpath_data = load_mesh(FOOTPATH_MESH);
-	//dataArray.push_back(footpath_data);
-	//textureArray.push_back(footpath);
-	//// ------------ ROAD ------------
-	//road_data = load_mesh(ROAD_MESH);
-	//dataArray.push_back(road_data);
-	//textureArray.push_back(road);
-	//// ------------ BUILDING1 ------------
-	//building1_data = load_mesh(BUILDING1_MESH);
-	//dataArray.push_back(building1_data);
-	//textureArray.push_back(building1);
-	//// ------------ BUILDING2 ------------
-	//building2_data = load_mesh(BUILDING2_MESH);
-	//dataArray.push_back(building2_data);
-	//textureArray.push_back(building2);
-	//// ------------ BUILDING3 ------------
-	//building3_data = load_mesh(BUILDING3_MESH);
-	//dataArray.push_back(building3_data);
-	//textureArray.push_back(building3);
-	//// ------------ GRASS ------------
-	//grass_data = load_mesh(GRASS_MESH);
-	//dataArray.push_back(grass_data);
-	//textureArray.push_back(grass);
-	//// ------------ CHEST ------------
-	//chest_data = load_mesh(CHEST_MESH);
-	//dataArray.push_back(chest_data);
-	//textureArray.push_back(chest);
-	//// ------------ HEAD ------------
-	//head_data = load_mesh(HEAD_MESH);
-	//dataArray.push_back(head_data);
-	//textureArray.push_back(skin);
-	//// ------------ HAIR ------------
-	//hair_data = load_mesh(HAIR_MESH);
-	//dataArray.push_back(hair_data);
-	//textureArray.push_back(hair);
-	//// ------------ LEFT LEG ------------
-	//leftLeg_data = load_mesh(LEFT_LEG_MESH);
-	//dataArray.push_back(leftLeg_data);
-	//textureArray.push_back(jean);
-	//// ------------ RIGHT LEG ------------
-	//rightLeg_data = load_mesh(RIGHT_LEG_MESH);
-	//dataArray.push_back(rightLeg_data);
-	//textureArray.push_back(jean);
-	//// ------------ LEFT SHOE ------------
-	//leftFoot_data = load_mesh(LEFT_FOOT_MESH);
-	//dataArray.push_back(leftFoot_data);
-	//textureArray.push_back(shoe);
-	//// ------------ RIGHT SHOE ------------
-	//rightFoot_data = load_mesh(RIGHT_FOOT_MESH);
-	//dataArray.push_back(rightFoot_data);
-	//textureArray.push_back(shoe);
-	//// ------------ BOTTLE ------------
-	//bottle_data = load_mesh(BOTTLE_MESH);
-	//dataArray.push_back(bottle_data);
-	//textureArray.push_back(bottle);
+	generateNonTextureObjects(nonTextureModels);
 }
 
 void generateSkybox() {
@@ -554,56 +523,6 @@ void generateSkybox() {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
-
-//void generateObjects() {
-//	/*car_data = load_mesh(CAR_MESH);
-//	wheel_data = load_mesh(WHEEL_MESH);*/
-//
-//	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
-//	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
-//
-//	// -------------------------------- CAR --------------------------------
-//	glGenVertexArrays(1, &carVAO);
-//	glGenBuffers(1, &carVBO1);
-//
-//	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
-//	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mVertices[0], GL_STATIC_DRAW);
-//
-//	glGenBuffers(1, &carVBO2);
-//	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
-//	glBufferData(GL_ARRAY_BUFFER, car_data.mPointCount * sizeof(vec3), &car_data.mNormals[0], GL_STATIC_DRAW);
-//
-//	glBindVertexArray(carVAO);
-//
-//	glEnableVertexAttribArray(loc1);
-//	glBindBuffer(GL_ARRAY_BUFFER, carVBO1);
-//	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-//
-//	glEnableVertexAttribArray(loc2);
-//	glBindBuffer(GL_ARRAY_BUFFER, carVBO2);
-//	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-//
-//	// -------------------------------- WHEEL --------------------------------
-//	glGenVertexArrays(1, &wheelsVAO);
-//	glGenBuffers(1, &wheelsVBO1);
-//
-//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
-//	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mVertices[0], GL_STATIC_DRAW);
-//
-//	glGenBuffers(1, &wheelsVBO2);
-//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
-//	glBufferData(GL_ARRAY_BUFFER, wheel_data.mPointCount * sizeof(vec3), &wheel_data.mNormals[0], GL_STATIC_DRAW);
-//
-//	glBindVertexArray(wheelsVAO);
-//
-//	glEnableVertexAttribArray(loc1);
-//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO1);
-//	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-//
-//	glEnableVertexAttribArray(loc2);
-//	glBindBuffer(GL_ARRAY_BUFFER, wheelsVBO2);
-//	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-//}
 
 #pragma endregion VBO_FUNCTIONS
 
@@ -654,139 +573,139 @@ void display() {
 	glDepthMask(GL_TRUE);
 
 	// ------------------------------------- CAR ------------------------------------- (object Shader)
-	//glUseProgram(objectShaderProgramID);
-	//glBindVertexArray(carVAO);
+	glUseProgram(objectShaderProgramID);
+	glBindVertexArray(objectsVAO[0]);
 
-	//float carSpeed = 100.0f * delta;
-	//glm::vec3 objectColor = glm::vec3(0.0f, 0.5f, 0.5f);
-	//glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
-	//glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
-	//glUniform3fv(glGetUniformLocation(objectShaderProgramID, "lightColor"), 1, &lightColor[0]);
-	//glUniform3fv(glGetUniformLocation(objectShaderProgramID, "lightPos"), 1, &lightPos[0]);
-	//glUniform3fv(glGetUniformLocation(objectShaderProgramID, "viewPos"), 1, &cameraPosition[0]);
+	float carSpeed = 100.0f * delta;
+	glm::vec3 objectColor = glm::vec3(0.0f, 0.5f, 0.5f);
+	glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "lightColor"), 1, &lightColor[0]);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "lightPos"), 1, &lightPos[0]);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "viewPos"), 1, &cameraPosition[0]);
 
-	//glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-	//glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
+	glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(glGetUniformLocation(objectShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 
-	//// Car 1
-	//glm::mat4 car1Model = glm::mat4(1.0f);
-	//car1Model = glm::translate(car1Model, carPos1);
-	//carPos1 += carSpeed * startingCameraFront;
-	//matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car1Model));
+	// Car 1
+	glm::mat4 car1Model = glm::mat4(1.0f);
+	car1Model = glm::translate(car1Model, carPos1);
+	carPos1 += carSpeed * startingCameraFront;
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car1Model));
 
-	//if (carPos1.z > -370) {
-	//	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
-	//}
-	//else {
-	//	drawCar1 = false;
-	//}
+	if (carPos1.z > -370) {
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[0].mPointCount);
+	}
+	else {
+		drawCar1 = false;
+	}
 
-	//// Car 2
-	///*objectColor = glm::vec3(0.5f, 0.0f, 0.1f);
-	//glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
-	//glm::mat4 car2Model = glm::mat4(1.0f);
-	//car2Model = glm::translate(car2Model, carPos2);
-	//car2Model = glm::rotate(car2Model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//carPos2 -= carSpeed * cameraFront;
-	//matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car2Model));
-	//glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
+	// Car 2
+	objectColor = glm::vec3(0.5f, 0.0f, 0.1f);
+	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	glm::mat4 car2Model = glm::mat4(1.0f);
+	car2Model = glm::translate(car2Model, carPos2);
+	car2Model = glm::rotate(car2Model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	carPos2 -= carSpeed * cameraFront;
+	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car2Model));
+	//glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[0].mPointCount);
 
-	//if (carPos2.z < 250) {
-	//	glDrawArrays(GL_TRIANGLES, 0, car_data.mPointCount);
-	//}
-	//else {
-	//	drawCar2 = false;
-	//}*/
+	if (carPos2.z < 250) {
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[0].mPointCount);
+	}
+	else {
+		drawCar2 = false;
+	}
 
-	//// ------------------------------------- WHEELS ------------------------------------- (object Shader)
-	//glBindVertexArray(wheelsVAO);
+	// ------------------------------------- WHEELS ------------------------------------- (object Shader)
+	glBindVertexArray(objectsVAO[1]);
 
-	//// Car 1
-	//if (drawCar1) {
-	//	objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
-	//	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	// Car 1
+	if (drawCar1) {
+		objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
+		glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
 
-	//	// Front-right
-	//	glm::mat4 wheelModel = glm::mat4(1.0f);
-	//	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	//	wheelModel = car1Model * wheelModel;
-	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-right
+		glm::mat4 wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	//	// Front-left
-	//	wheelModel = glm::mat4(1.0f);
-	//	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	//	wheelModel = car1Model * wheelModel;
-	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	//	// Back-right 
-	//	wheelModel = glm::mat4(1.0f);
-	//	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	//	wheelModel = car1Model * wheelModel;
-	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Back-right 
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	//	// Back-left
-	//	wheelModel = glm::mat4(1.0f);
-	//	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	//	wheelModel = car1Model * wheelModel;
-	//	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	//	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
-	//}
+		// Back-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car1Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
+	}
 
-	//// Car 2
-	////if (drawCar2) {
-	////	objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
-	////	glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
+	// Car 2
+	if (drawCar2) {
+		objectColor = glm::vec3(0.2f, 0.2f, 0.2f);
+		glUniform3fv(glGetUniformLocation(objectShaderProgramID, "objectColor"), 1, &objectColor[0]);
 
-	////	// Front-right
-	////	glm::mat4 wheelModel = glm::mat4(1.0f);
-	////	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	////	wheelModel = car2Model * wheelModel;
-	////	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	////	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-right
+		glm::mat4 wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	////	// Front-left
-	////	wheelModel = glm::mat4(1.0f);
-	////	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	////	wheelModel = car2Model * wheelModel;
-	////	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	////	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Front-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, -16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	////	// Back-right 
-	////	wheelModel = glm::mat4(1.0f);
-	////	wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	////	wheelModel = car2Model * wheelModel;
-	////	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	////	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
+		// Back-right 
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
 
-	////	// Back-left
-	////	wheelModel = glm::mat4(1.0f);
-	////	wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	////	wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
-	////	wheelModel = car2Model * wheelModel;
-	////	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
-	////	glDrawArrays(GL_TRIANGLES, 0, wheel_data.mPointCount);
-	////}
-	//
+		// Back-left
+		wheelModel = glm::mat4(1.0f);
+		wheelModel = glm::translate(wheelModel, glm::vec3(-10.0f, -4.0f, 16.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		wheelModel = glm::rotate(wheelModel, glm::radians(rotate_y), glm::vec3(1.0f, 0.0f, 0.0f));
+		wheelModel = car2Model * wheelModel;
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(wheelModel));
+		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[1].mPointCount);
+	}
+	
 	//------------------------------------- BIN ------------------------------------- (texture Shader)
 
 	glUseProgram(textureShaderProgramID);
