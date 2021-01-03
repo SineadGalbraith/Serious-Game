@@ -1,15 +1,15 @@
 #pragma once
 
-// Windows includes (For Time, IO, etc.)
+// Include Windows and Vector
 #include <windows.h>
 #include <vector> 
 
-// Assimp includes
+// include Assimp includes
 #include <assimp/cimport.h> // scene importer
 #include <assimp/scene.h> // collects data
 #include <assimp/postprocess.h> // various extra operations
 
-// Project includes
+// Include Maths Functions
 #include "maths_funcs.h"
 
 typedef struct

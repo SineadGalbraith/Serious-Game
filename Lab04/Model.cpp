@@ -3,34 +3,40 @@
 std::vector < ModelData > dataArray;
 std::vector < std::string > textureArray;
 std::vector < ModelData > nonTextureObjects;
-Model::Model() {
 
-}
+// Default Constructor
+Model::Model() {}
 
+// Constructor for models with textures
 Model::Model(const char* mesh, const char* texture) {
 	modelMesh = load_mesh(mesh);
 	dataArray.push_back(modelMesh);
 	textureArray.push_back(texture);
 }
 
+// Constructor for models without textures
 Model::Model(const char* mesh) {
 	modelMesh = load_mesh(mesh);
 	nonTextureObjects.push_back(modelMesh);
 }
 
+// Return the data array (i.e. models that have textures)
 std::vector < ModelData > Model::getDataArray() {
 	return dataArray;
 }
 
+// Return the texture array
 std::vector < std::string > Model::getTextureArray() {
 	return textureArray;
 }
 
+// Return the non-texture objects (i.e. models that do not have textures)
 std::vector < ModelData > Model::getNonTextureObjects() {
 	return nonTextureObjects;
 }
 
-#pragma region MESH LOADING
+// ------------ MESH LOADING FUNCTION (UNCHANGED) ------------
+#pragma region MESH_LOADING
 /*----------------------------------------------------------------------------
 MESH LOADING FUNCTION
 ----------------------------------------------------------------------------*/
@@ -85,5 +91,4 @@ ModelData Model::load_mesh(const char* file_name) {
 	aiReleaseImport(scene);
 	return modelData;
 }
-
-#pragma endregion MESH LOADING
+#pragma endregion MESH_LOADING

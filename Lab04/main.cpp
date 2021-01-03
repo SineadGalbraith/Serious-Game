@@ -1,42 +1,31 @@
-// Windows includes (For Time, IO, etc.)
+// Includes
 #include <windows.h>
 #include <mmsystem.h>
 #include <iostream>
-#include <string>
-#include <stdio.h>
-#include <math.h>
-#include <vector> // STL dynamic memory.
+//#include <stdio.h>
 
-// OpenGL includes
+// Include GLUT
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-// Include GLM functions
+// Include GLM 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-// Assimp includes
-#include <assimp/cimport.h> // scene importer
-#include <assimp/scene.h> // collects data
-#include <assimp/postprocess.h> // various extra operations
-
-// Project includes
-#include "maths_funcs.h"
 
 // Loading photos
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <glm/gtx/string_cast.hpp>
-
 // GLFW includes
 #include <GLFW\glfw3.h>
 
+// Include Model Class
 #include "Model.h"
 Model model;
+
 /*----------------------------------------------------------------------------
-MESH TO LOAD
+MESHES
 ----------------------------------------------------------------------------*/
 #define BIN_MESH "./models/rubbishBinCircular.dae"
 #define FOOTPATH_MESH "./models/footpath.dae"
@@ -55,6 +44,7 @@ MESH TO LOAD
 #define LEFT_FOOT_MESH "./models/leftFoot.dae"
 #define RIGHT_FOOT_MESH "./models/rightFoot.dae"
 #define BOTTLE_MESH "./models/bottle.dae"
+#define BAG_MESH "./models/rubbishBag.dae"
 
 /*----------------------------------------------------------------------------
 TEXTURES
@@ -72,9 +62,9 @@ const char *skin = "./textures/skin_texture.jpg";
 const char *jean = "./textures/legs_texture.jpg";
 const char *shoe = "./textures/shoe_texture.jpg";
 const char *hair = "./textures/hair_texture.jpg";
+const char *rubbishBag = "./textures/rubbishBag_texture.jpg";
 
 using namespace std;
-
 int width = 800;
 int height = 600;
 
@@ -86,16 +76,19 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 cameraRight = glm::vec3(0.0f);
 
-
+// ------------ CAMERA SCROLLING ------------
 bool firstMouse = true;
 float yaw = -90.0f;
 float pitch = 0.0f;
 float lastX = (float)width / 2.0;
 float lastY = (float)height / 2.0;
-float fov = 45.0f;
 
+// ------------ SPEED ------------
 float delta;
 static DWORD last_time = 0;
+
+// ------------ ROTATION ------------
+GLfloat rotate_y = 0.0f;
 
 // ------------ KEY PRESS TOGGLE ------------
 bool keyC = false;
@@ -103,32 +96,27 @@ bool keyM = false;
 bool keyO = false;
 bool keyP = false;
 
-// ------------ SHADER ------------
+// ------------ SHADERS ------------
 GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID;
+float uvScalar = 0;
 
 // ------------ VBO/VAO SETUP ------------
 const int i = 16;
 const int j = 3;
 GLuint VAO[i], VBO[i * 3], VTO[i];
 GLuint objectsVAO[j], objectsVBO[j * 3];
+GLuint loc1, loc2, loc3;
 
-// ------------ MESH SETUP ------------
-ModelData bin_data, footpath_data, wall_data, road_data, building1_data, building2_data, building3_data, grass_data, car_data, wheel_data, bottle_data, chest_data, head_data, hair_data, leftLeg_data, rightLeg_data, leftFoot_data, rightFoot_data;
-
-GLfloat rotate_y = 0.0f;
-
-// ------------ SKYBOX ------------
-unsigned int skyboxVAO, skyboxVBO;
-unsigned int cubemapTexture;
+// ------------ MODEL RELATED ARRAYS ------------
+std::vector < ModelData > meshData;
+std::vector < std::string > textures;
+std::vector < ModelData > nonTextureModels;
 
 // ------------ CAR ------------
 glm::vec3 carPos1 = glm::vec3(-90.0f, 9.0f, 5000.0f);
 glm::vec3 carPos2 = glm::vec3(-60.0f, 9.0f, -10000.0f);
 bool drawCar1 = true;
 bool drawCar2 = true;
-
-// ------------ TEXTURE ------------
-float uvScalar = 0;
 
 // ------------ LIGHTING ------------
 glm::vec3 lightPos(-20.0f, 100.0f, 100.0f);
@@ -141,44 +129,67 @@ glm::vec3 lastCameraPos;
 glm::vec3 lastCameraFront;
 glm::vec3 lastCameraUp;
 
-// ------------ FRED ------------
+// ------------ FRED (I.E PLAYER CHARACTER) ------------
 glm::vec3 fredPos = glm::vec3(0.0f, 17.0f, 222.0f);
 
 // ------------ SCORE ------------
 int playerScore = 0;
 
-// ------------ INVENTORY ------------
+// ------------ PICK UP AND DEPOSIT OBJECTS ------------
 bool pressP = false;
+bool pressM = false;
+
+// ------------ INVENTORY ------------
 int bottleInventory = 0;
-int rubbishInventory = 0;
+int bagInventory = 0;
+
+// ------------ OBJECTS ------------
+int xDistance = 10;
+int zDistance = 50;
 
 // ------------ BOTTLES ------------
 bool bottle1 = true;
 bool bottle2 = true;
 bool bottle3 = true;
 bool bottle4 = true;
-glm::vec3 bottle1Pos = glm::vec3(-16.0f, 3.8f, 140.0f);
-glm::vec3 bottle2Pos = glm::vec3(-18.0f, 3.8f, 110.0f);
-glm::vec3 bottle3Pos = glm::vec3(14.0f, 3.8f, 120.0f);
-glm::vec3 bottle4Pos = glm::vec3(-8.0f, 3.8f, 50.0f);
+bool bottle5 = true;
+bool bottle6 = true;
+bool bottle7 = true;
+bool bottle8 = true;
+bool bottle9 = true;
+bool bottle10 = true;
+glm::vec3 bottle1Pos = glm::vec3(-16.0f, 3.8f, 180.0f);
+glm::vec3 bottle2Pos = glm::vec3(-18.0f, 3.8f, 130.0f);
+glm::vec3 bottle3Pos = glm::vec3(14.0f, 3.8f, 95.0f);
+glm::vec3 bottle4Pos = glm::vec3(-12.0f, 3.8f, 50.0f);
+glm::vec3 bottle5Pos = glm::vec3(18.0f, 3.8f, 0.0f);
+glm::vec3 bottle6Pos = glm::vec3(5.0f, 3.8f, -40.0f);
+glm::vec3 bottle7Pos = glm::vec3(-18.0f, 3.8f, -70.0f);
+glm::vec3 bottle8Pos = glm::vec3(17.0f, 3.8f, -125.0f);
+glm::vec3 bottle9Pos = glm::vec3(-10.0f, 3.8f, -163.0f);
+glm::vec3 bottle10Pos = glm::vec3(7.0f, 3.8f, -200.0f);
+
+// ------------ BAGS ------------
+bool bag1 = true;
+bool bag2 = true;
+bool bag3 = true;
+bool bag4 = true;
+bool bag5 = true;
+glm::vec3 bag1Pos = glm::vec3(-22.0f, 4.0f, 138.0f);
+glm::vec3 bag2Pos = glm::vec3(-20.0f, 5.0f, 65.0f);
+glm::vec3 bag3Pos = glm::vec3(14.0f, 4.0f, -20.0f);
+glm::vec3 bag4Pos = glm::vec3(-15.5f, 4.0f, -100.0f);
+glm::vec3 bag5Pos = glm::vec3(20.0f, 5.0f, -180.0f);
 
 // ------------ BINS ------------
-bool pressM = false;
 glm::vec3 bin1Pos = glm::vec3(-20.0, 3.0, 135.0f);
 glm::vec3 bin2Pos = glm::vec3(20.0, 3.0, 20.0f);
 glm::vec3 bin3Pos = glm::vec3(-20.0, 3.0, -100.0f);
 glm::vec3 bin4Pos = glm::vec3(20.0, 3.0, -220.0f);
 
-
-
-GLuint loc1, loc2, loc3;
-
-
-
-std::vector < ModelData > meshData;
-std::vector < std::string > textures;
-std::vector < ModelData > nonTextureModels;
-
+// ------------ SKYBOX ------------
+unsigned int skyboxVAO, skyboxVBO;
+unsigned int cubemapTexture;
 vector<std::string> faces
 {
 	"./skybox/right.bmp",
@@ -233,7 +244,7 @@ float skyboxVertices[] = {
 	 500.0f, -500.0f,  500.0f
 };
 
-// Shader Functions- click on + to expand
+// ------------ SHADER FUNCTIONS (UNCHANGED) ------------
 #pragma region SHADER_FUNCTIONS
 char* readShaderSource(const char* shaderFile) {
 	FILE* fp;
@@ -338,44 +349,35 @@ GLuint CompileShaders(const char* vertexShader, const char* fragmentShader)
 }
 #pragma endregion SHADER_FUNCTIONS
 
+// ------------ TEXTURE FUNCTIONS FOR MODELS AND SKYBOX------------
 #pragma region TEXTURE_FUNCTIONS
+// Function to load the faces (outlined above) and assemble the skybox.
 unsigned int loadCubemap(vector<std::string> faces)
 {
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	unsigned int skyboxTextureID;
+	glGenTextures(1, &skyboxTextureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureID);
 
 	int width, height, nrChannels;
 	for (unsigned int i = 0; i < faces.size(); i++)
 	{
 		unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
-			);
-			stbi_image_free(data);
-		}
-		else
-		{
-			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
-			stbi_image_free(data);
-		}
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		stbi_image_free(data);
 	}
+
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	return textureID;
+	return skyboxTextureID;
 }
 
-
-#pragma endregion TEXTURE_FUNCTIONS
-// VBO Functions - click on + to expand
-#pragma region VBO_FUNCTIONS
-
+// Function to load the textures of each individual object. The beginning of this function is very similar to the previous function.
+// The main difference in this function is that it checks the number of channels in the image to determine the type of image (e.g
+// JPG or PNG).
 void loadTexture(const char* texture, int i) {
 	glGenTextures(1, &VTO[i]);
 	int width, height, nrComponents;
@@ -400,7 +402,14 @@ void loadTexture(const char* texture, int i) {
 
 	stbi_image_free(data);
 }
+#pragma endregion TEXTURE_FUNCTIONS
 
+// ------------ VBO FUNCTIONS ------------
+#pragma region VBO_FUNCTIONS
+// This function is an updated version of the function originally provided with the same code. This function
+// caters for models that have an associated texture specifically. The dataArray and textureArray that have 
+// been returned from the model class are passed in and VAOs, VBOs and VTOs are created respectively for each 
+// object in the arrays.
 void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <std::string> textureArray) {
 
 	int width, height, nrChannels;
@@ -452,6 +461,8 @@ void generateObjectBufferMesh(std::vector < ModelData > dataArray, std::vector <
 	}
 }
 
+// This function is similar to the one above only it caters for the models without an associated texture. The process
+// is pretty much the same but there are no texture coordinates.
 void generateNonTextureObjects(std::vector <ModelData> nonTextureObjects) {
 	loc1 = glGetAttribLocation(objectShaderProgramID, "vertex_position");
 	loc2 = glGetAttribLocation(objectShaderProgramID, "vertex_normal");
@@ -483,10 +494,14 @@ void generateNonTextureObjects(std::vector <ModelData> nonTextureObjects) {
 		counter += 2;
 	}
 }
-
-
 #pragma endregion VBO_FUNCTIONS
 
+// ------------ GENERATE MODEL FUNCTION ------------
+#pragma region MODELS_FUNCTION
+// This function takes each of the meshes that have been defined at the beginning of the program
+// and loads them in. This functionality was split into a separate class as it was not needed within
+// the main body of the program. An array of the meshes and also of textures are then returned and
+// passed to the VBO Functions.
 void generateModels() {
 	Model bin_data(BIN_MESH, bin);
 	Model footpath_data(FOOTPATH_MESH, footpath);
@@ -503,6 +518,7 @@ void generateModels() {
 	Model leftFoot_data(LEFT_FOOT_MESH, shoe);
 	Model rightFoot_data(RIGHT_FOOT_MESH, shoe);
 	Model bottle_data(BOTTLE_MESH, bottle);
+	Model bag_data(BAG_MESH, rubbishBag);
 	Model car_data(CAR_MESH);
 	Model wheel_data(WHEEL_MESH);
 
@@ -513,7 +529,11 @@ void generateModels() {
 	generateObjectBufferMesh(meshData, textures);
 	generateNonTextureObjects(nonTextureModels);
 }
+#pragma endregion MODELS_FUNCTION
 
+// ------------ GENERATE SKYBOX FUNCTION ------------
+#pragma region SKYBOX_FUNCTION
+// This function creates the VAO and VBO needed for generating the skybox.
 void generateSkybox() {
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
@@ -523,14 +543,13 @@ void generateSkybox() {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
+#pragma endregion SKYBOX_FUNCTION
 
-#pragma endregion VBO_FUNCTIONS
-
+// ------------ DISPLAY ------------
 void display() {
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glActiveTexture(GL_TEXTURE0);
-	pressP = false;
 	glDepthFunc(GL_LESS); 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
@@ -610,7 +629,6 @@ void display() {
 	carPos2 -= carSpeed * cameraFront;
 	matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(car2Model));
-	//glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[0].mPointCount);
 
 	if (carPos2.z < 250) {
 		glDrawArrays(GL_TRIANGLES, 0, nonTextureModels[0].mPointCount);
@@ -707,7 +725,6 @@ void display() {
 	}
 	
 	//------------------------------------- BIN ------------------------------------- (texture Shader)
-
 	glUseProgram(textureShaderProgramID);
 
 	// Diffuse material
@@ -729,7 +746,6 @@ void display() {
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "light.ambient"), 1, &lAmbient[0]);
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "light.diffuse"), 1, &lDiffuse[0]);
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "light.specular"), 1, &lSpecular[0]);
-
 	glUniform3fv(glGetUniformLocation(textureShaderProgramID, "material.specular"), 1, &mSpecular[0]);
 	glUniform1f(glGetUniformLocation(textureShaderProgramID, "material.shininess"), 32.0f);
 	
@@ -741,7 +757,11 @@ void display() {
 	glBindTexture(GL_TEXTURE_2D, VTO[0]);
 	glBindVertexArray(VAO[0]);
 
-	if ((fredPos.z - bin1Pos.z < 50) || (fredPos.z - bottle2Pos.z < 50) || (fredPos.z - bottle3Pos.z < 50) || (fredPos.z - bottle4Pos.z < 50)) {
+	// Deposit Objects Into Bin
+	if (glm::distance(bin1Pos.x, fredPos.x) < xDistance & glm::distance(bin1Pos.z, fredPos.z) < zDistance || 
+		glm::distance(bin2Pos.x, fredPos.x) < xDistance & glm::distance(bin2Pos.z, fredPos.z) < zDistance || 
+		glm::distance(bin3Pos.x, fredPos.x) < xDistance & glm::distance(bin3Pos.z, fredPos.z) < zDistance || 
+		glm::distance(bin4Pos.x, fredPos.x) < xDistance & glm::distance(bin4Pos.z, fredPos.z) < zDistance) {
 		pressM = true;
 	}
 	else {
@@ -753,28 +773,24 @@ void display() {
 	binModel = glm::translate(binModel, bin1Pos);
 	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	//glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
 
 	// Bin 2
 	binModel = glm::mat4(1.0f);
 	binModel = glm::translate(binModel, bin2Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	//glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
 
 	// Bin 3
 	binModel = glm::mat4(1.0f);
 	binModel = glm::translate(binModel, bin3Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	//glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
 
 	// Bin 4
 	binModel = glm::mat4(1.0f);
 	binModel = glm::translate(binModel, bin4Pos);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	//glDrawArrays(GL_TRIANGLES, 0, bin_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
 
 	// ------------------------------------- FOOTPATHS ------------------------------------- (texture Shader)
@@ -790,14 +806,12 @@ void display() {
 	glm::mat4 footpathModel = glm::mat4(1.0f);
 	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-	//glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[1].mPointCount);
 
 	// Footpath 2
 	footpathModel = glm::mat4(1.0f);
 	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 2.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-	//glDrawArrays(GL_TRIANGLES, 0, footpath_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[1].mPointCount);
 
 	// ------------------------------------- ROAD ------------------------------------- (texture Shader)
@@ -813,7 +827,6 @@ void display() {
 	glm::mat4 roadModel = glm::mat4(1.0f);
 	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
-	//glDrawArrays(GL_TRIANGLES, 0, road_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[2].mPointCount);
 
 	// ------------------------------------- BUILDING1 ------------------------------------- (texture Shader)
@@ -829,21 +842,18 @@ void display() {
 	glm::mat4 building1Model = glm::mat4(1.0f);
 	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, 20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
 
 	// Building 1 - 2
 	building1Model = glm::mat4(1.0f);
 	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -98.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
 
 	// Building 1 - 3
 	building1Model = glm::mat4(1.0f);
 	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -152.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building1_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
 
 	// ------------------------------------- BUILDING2 ------------------------------------- (texture Shader)
@@ -859,14 +869,12 @@ void display() {
 	glm::mat4 building2Model = glm::mat4(1.0f);
 	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -39.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[4].mPointCount);
 
 	// Building 2 - 2
 	building2Model = glm::mat4(1.0f);
 	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -211.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building2_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[4].mPointCount);
 
 	// ------------------------------------- BUILDING3 ------------------------------------- (texture Shader)
@@ -882,14 +890,12 @@ void display() {
 	glm::mat4 building3Model = glm::mat4(1.0f);
 	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 100.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[5].mPointCount);
 
 	// Building 3 - 2
 	building3Model = glm::mat4(1.0f);
 	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 218.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-	//glDrawArrays(GL_TRIANGLES, 0, building3_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[5].mPointCount);
 
 	// ------------------------------------- GRASS ------------------------------------- (texture Shader)
@@ -905,7 +911,6 @@ void display() {
 	glm::mat4 grassModel = glm::mat4(1.0f);
 	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -12.0f, -20.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
-	//glDrawArrays(GL_TRIANGLES, 0, grass_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[6].mPointCount);
 
 	// ------------------------------------- CHEST ------------------------------------- (texture Shader)
@@ -922,7 +927,6 @@ void display() {
 	chestModel = glm::translate(chestModel, fredPos);
 	chestModel = glm::rotate(chestModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(chestModel));
-	//glDrawArrays(GL_TRIANGLES, 0, chest_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[7].mPointCount);
 
 	// ------------------------------------- HEAD ------------------------------------- (texture Shader)
@@ -940,7 +944,6 @@ void display() {
 	headModel = glm::rotate(headModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	headModel = chestModel * headModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(headModel));
-	//glDrawArrays(GL_TRIANGLES, 0, head_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[8].mPointCount);
 
 	// ------------------------------------- HAIR ------------------------------------- (texture Shader)
@@ -958,7 +961,6 @@ void display() {
 	hairModel = glm::rotate(hairModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	hairModel = headModel * hairModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(hairModel));
-	//glDrawArrays(GL_TRIANGLES, 0, hair_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[9].mPointCount);
 
 	// ------------------------------------- LEFT LEG ------------------------------------- (texture Shader)
@@ -976,7 +978,6 @@ void display() {
 	leftLegModel = glm::rotate(leftLegModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	leftLegModel = chestModel * leftLegModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(leftLegModel));
-	//glDrawArrays(GL_TRIANGLES, 0, leftLeg_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[10].mPointCount);
 
 	// ------------------------------------- RIGHT LEG ------------------------------------- (texture Shader)
@@ -993,7 +994,6 @@ void display() {
 	rightLegModel = glm::translate(rightLegModel, glm::vec3(0.0f, -6.0f, 0.0f));
 	rightLegModel = chestModel * rightLegModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(rightLegModel));
-	//glDrawArrays(GL_TRIANGLES, 0, rightLeg_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[11].mPointCount);
 
 	// ------------------------------------- LEFT FOOT ------------------------------------- (texture Shader)
@@ -1011,9 +1011,7 @@ void display() {
 	leftFootModel = glm::rotate(leftFootModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	leftFootModel = leftLegModel * leftFootModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(leftFootModel));
-	//glDrawArrays(GL_TRIANGLES, 0, leftFoot_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[12].mPointCount);
-
 
 	// ------------------------------------- RIGHT FOOT ------------------------------------- (texture Shader)
 	//uvScalar
@@ -1029,10 +1027,9 @@ void display() {
 	rightFootModel = glm::translate(rightFootModel, glm::vec3(-1.25f, -0.2f, 0.0f));
 	rightFootModel = rightLegModel * rightFootModel;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(rightFootModel));
-	//glDrawArrays(GL_TRIANGLES, 0, rightFoot_data.mPointCount);
 	glDrawArrays(GL_TRIANGLES, 0, meshData[13].mPointCount);
 
-	// ------------------------------------- BOTTLE ------------------------------------- (texture Shader)
+	// ------------------------------------- BOTTLES ------------------------------------- (texture Shader)
 	// uvScalar
 	uvScalar = 20;
 	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
@@ -1040,81 +1037,310 @@ void display() {
 	// Texture & VAO
 	glBindTexture(GL_TEXTURE_2D, VTO[14]);
 	glBindVertexArray(VAO[14]);
-	if ((bottle1 && (fredPos.z - bottle1Pos.z < 50)) || (bottle2 && (fredPos.z - bottle2Pos.z < 50)) || (bottle3 && (fredPos.z - bottle3Pos.z < 50)) || 
-		(bottle4 && (fredPos.z - bottle4Pos.z < 50))) {
-		pressP = true;
-	}
-	else {
-		pressP = false;
-	}
 
+	// Bottles
 	glm::mat4 bottleModel = glm::mat4(1.0f);
 	// Bottle 1
-	if ((keyP && (fredPos.z - bottle1Pos.z < 50)) && bottle1) {
-		bottleInventory++;
-		bottle1 = false;
-		pressP = false;
-		keyP = false;
-	}
-	else if (bottle1) {
+	if (bottle1) {
 		bottleModel = glm::translate(bottleModel, bottle1Pos);
 		bottleModel = glm::rotate(bottleModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		//glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
 	}
 
-	// Bottle 2
-	if (keyP && (fredPos.z - bottle2Pos.z < 50) && bottle2) {
-		bottleInventory++;
-		bottle2 = false;
-		pressP = false;
-		keyP = false;
-	}
-	else if (bottle2) {
+	// Bottle2
+	if (bottle2) {
 		bottleModel = glm::mat4(1.0f);
 		bottleModel = glm::translate(bottleModel, bottle2Pos);
 		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		//glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
 	}
 
-	//std::cout << bottleInventory << std::endl;
-	
-	// Bottle 3
-	if ((keyP && (fredPos.z - bottle3Pos.z < 50)) && bottle3) {
-		bottleInventory++;
-		bottle3 = false;
-		pressP = false;
-		keyP = false;
-	}
-	else if (bottle3) {
+	// Bottle3
+	if (bottle3) {
 		bottleModel = glm::mat4(1.0f);
 		bottleModel = glm::translate(bottleModel, bottle3Pos);
 		bottleModel = glm::rotate(bottleModel, glm::radians(-50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		//glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
 	}
 
-	// Bottle 4
-	if ((keyP && (fredPos.z - bottle4Pos.z < 50)) && bottle4) {
-		bottleInventory++;
-		bottle4 = false;
-		pressP = false;
-		keyP = false;
-	}
-	else if (bottle4) {
+	// Bottle4
+	if (bottle4) {
 		bottleModel = glm::mat4(1.0f);
 		bottleModel = glm::translate(bottleModel, bottle4Pos);
 		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		//glDrawArrays(GL_TRIANGLES, 0, bottle_data.mPointCount);
 		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
 	}
 
-	// ------------------------------------- End Game ------------------------------------- 
+	// Bottle5
+	if (bottle5) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle5Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
 
-	/*if (fredPos.z <= -230) {
+	// Bottle6
+	if (bottle6) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle6Pos);
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
+
+	// Bottle7
+	if (bottle7) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle7Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(-76.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
+
+	// Bottle8
+	if (bottle8) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle8Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(32.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
+
+	// Bottle9
+	if (bottle9) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle9Pos);
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
+
+	// Bottle10
+	if (bottle10) {
+		bottleModel = glm::mat4(1.0f);
+		bottleModel = glm::translate(bottleModel, bottle10Pos);
+		bottleModel = glm::rotate(bottleModel, glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+	}
+
+	// Pick up Bottles
+	// Bottle 1
+	if (bottle1 && glm::distance(bottle1Pos.x, fredPos.x) < xDistance & glm::distance(bottle1Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle1 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 2
+	if (bottle2 && glm::distance(bottle2Pos.x, fredPos.x) < xDistance & glm::distance(bottle2Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle2 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 3
+	if (bottle3 && glm::distance(bottle3Pos.x, fredPos.x) < xDistance & glm::distance(bottle3Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle3 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 4
+	if (bottle4 && glm::distance(bottle4Pos.x, fredPos.x) < xDistance & glm::distance(bottle4Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle4 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 5
+	if (bottle5 && glm::distance(bottle5Pos.x, fredPos.x) < xDistance & glm::distance(bottle5Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle5 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 6
+	if (bottle6 && glm::distance(bottle6Pos.x, fredPos.x) < xDistance & glm::distance(bottle6Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle6 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 7
+	if (bottle7 && glm::distance(bottle7Pos.x, fredPos.x) < xDistance & glm::distance(bottle7Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle7 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 8
+	if (bottle8 && glm::distance(bottle8Pos.x, fredPos.x) < xDistance & glm::distance(bottle8Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle8 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 9
+	if (bottle9 && glm::distance(bottle9Pos.x, fredPos.x) < xDistance & glm::distance(bottle9Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle9 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bottle 10
+	if (bottle10 && glm::distance(bottle10Pos.x, fredPos.x) < xDistance & glm::distance(bottle10Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bottleInventory++;
+			bottle10 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+
+	// ------------------------------------- RUBBISH BAG ------------------------------------- (texture Shader)
+	// uvScalar
+	uvScalar = 1;
+	glUniform1f(glGetUniformLocation(textureShaderProgramID, "uvScalar"), uvScalar);
+
+	// Texture & VAO
+	glBindTexture(GL_TEXTURE_2D, VTO[15]);
+	glBindVertexArray(VAO[15]);
+
+	// Bags
+	glm::mat4 bagModel = glm::mat4(1.0f);
+	// Bag 1
+	if (bag1) {
+		bagModel = glm::translate(bagModel, bag1Pos);
+		bagModel = glm::rotate(bagModel, glm::radians(-45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+	}
+
+	// Bag 2
+	if (bag2) {
+		bagModel = glm::mat4(1.0f);
+		bagModel = glm::translate(bagModel, bag2Pos);
+		bagModel = glm::rotate(bagModel, glm::radians(-90.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+	}
+
+	// Bag 3
+	if (bag3) {
+		bagModel = glm::mat4(1.0f);
+		bagModel = glm::translate(bagModel, bag3Pos);
+		bagModel = glm::rotate(bagModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+	}
+
+	// Bag 4
+	if (bag4) {
+		bagModel = glm::mat4(1.0f);
+		bagModel = glm::translate(bagModel, bag4Pos);
+		bagModel = glm::rotate(bagModel, glm::radians(-45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+	}
+
+	// Bag 5
+	if (bag5) {
+		bagModel = glm::mat4(1.0f);
+		bagModel = glm::translate(bagModel, bag5Pos);
+		bagModel = glm::rotate(bagModel, glm::radians(-180.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
+		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+	}
+
+	// Pick up Bags
+	// Bag 1
+	if (bag1 && glm::distance(bag1Pos.x, fredPos.x) < xDistance & glm::distance(bag1Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bagInventory++;
+			bag1 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bag 2
+	if (bag2 && glm::distance(bag2Pos.x, fredPos.x) < xDistance & glm::distance(bag2Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bagInventory++;
+			bag2 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bag 3
+	if (bag3 && glm::distance(bag3Pos.x, fredPos.x) < xDistance & glm::distance(bag3Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bagInventory++;
+			bag3 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bag 4
+	if (bag4 && glm::distance(bag4Pos.x, fredPos.x) < xDistance & glm::distance(bag4Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bagInventory++;
+			bag4 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+	// Bag 5
+	if (bag5 && glm::distance(bag5Pos.x, fredPos.x) < xDistance & glm::distance(bag5Pos.z, fredPos.z) < zDistance) {
+		pressP = true;
+		if (keyP) {
+			bagInventory++;
+			bag5 = false;
+			pressP = false;
+			keyP = false;
+		}
+	}
+
+	// ------------------------------------- End Game ------------------------------------- 
+	if (fredPos.z <= -210) {
 		std::string score = "Final Score:\n " + std::to_string(playerScore);
 		LPCSTR sw = score.c_str();
 		int messageBoxID = MessageBox(NULL, sw, "Game Over", MB_OK);
@@ -1122,44 +1348,14 @@ void display() {
 		case IDOK:
 			exit(0);
 		}
-	}*/
-
-	// ------------------------------------- SCORE BOX ------------------------------------- 
-
-	//glBegin(GL_QUADS);              
-	//glColor3f(1.0f, 1.0f, 1.0f); // White
-	//glVertex2f(cameraPosition.x + 20, cameraPosition.y + 15);     // Define vertices in counter-clockwise (CCW) order
-	//glVertex2f(cameraPosition.x + 16, cameraPosition.y + 15);     //  so that the normal (front-face) is facing you
-	//glVertex2f(cameraPosition.x + 16, cameraPosition.y + 10);
-	//glVertex2f(cameraPosition.x + 20, cameraPosition.y + 10);
-
-	//glVertex2f(-0.8f, 16.0f);     // Define vertices in counter-clockwise (CCW) order
-	//glVertex2f(-0.2f, 16.0f);     //  so that the normal (front-face) is facing you
-	//glVertex2f(-0.2f, 16.6f);
-	//glVertex2f(-0.8f, 16.6f);
-
-	//glColor3f(0.0f, 1.0f, 0.0f); // Green
-	//glVertex2f(-0.7f, -0.6f);
-	//glVertex2f(-0.1f, -0.6f);
-	//glVertex2f(-0.1f, 0.0f);
-	//glVertex2f(-0.7f, 0.0f);
-
-	//glColor3f(0.2f, 0.2f, 0.2f); // Dark Gray
-	//glVertex2f(-0.9f, -0.7f);
-	//glColor3f(1.0f, 1.0f, 1.0f); // White
-	//glVertex2f(-0.5f, -0.7f);
-	//glColor3f(0.2f, 0.2f, 0.2f); // Dark Gray
-	//glVertex2f(-0.5f, -0.3f);
-	//glColor3f(1.0f, 1.0f, 1.0f); // White
-	//glVertex2f(-0.9f, -0.3f);
-	glEnd();
+	}
 
 	// ---------------------------------------------------------------------------------
-
 	glutSwapBuffers();
 
 }
 
+// ------------ UPDATE SCENE (UNCHANGED) ------------
 void updateScene() {
 
 	DWORD curr_time = timeGetTime();
@@ -1176,7 +1372,7 @@ void updateScene() {
 	glutPostRedisplay();
 }
 
-
+// ------------ INITIATE SCENE AND SET UP OBJECTS ------------
 void init()
 {
 	// Set up the shaders
@@ -1188,27 +1384,28 @@ void init()
 	cubemapTexture = loadCubemap(faces);
 	// Generate the rest of the Models (both with textures and without)
 	generateModels();
-	//generateObjects();
-	//std::cout << model.getDataArray << std::endl;
 }
 
-// Placeholder code for the keypress
+// ------------ KEYBOARD AND MOUSE FUNCTIONALITY ------------
+#pragma region KEYBOARD_FUNCTIONS
+// This function manages all of the keyboard input. If a key with a function is pressed,
+// it will be handled here.
 void keypress(unsigned char key, int x, int y) {
 	float cameraSpeed = 300.0f * delta;
 	int messageBoxID;
-	std::string s = "Bottles: " + std::to_string(bottleInventory);
+	std::string s = "Bottles: " + std::to_string(bottleInventory) + "\nBags: " + std::to_string(bagInventory);
 	LPCSTR sw = s.c_str();
 	std::string score = "Score: " + std::to_string(playerScore);
 	LPCSTR scores = score.c_str();
 	switch (key) {
-		// Move Camera Left
+	// Move Camera Left
 	case 'a':
 		if (cameraPosition.x > -140 && !keyO) {
 			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			fredPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
-		// Show Score
+	// Show Score
 	case 'b':
 		messageBoxID = MessageBox(NULL, scores, "Score", MB_OK);
 		switch (messageBoxID) {
@@ -1216,7 +1413,7 @@ void keypress(unsigned char key, int x, int y) {
 			break;
 		}
 		break;
-		// Use camera to move around the screen
+	// Use camera to move around the screen
 	case 'c':
 		if (!keyC && !keyO) {
 			keyC = true;
@@ -1225,14 +1422,14 @@ void keypress(unsigned char key, int x, int y) {
 			keyC = false;
 		}
 		break;
-		// Move Camera Right
+	// Move Camera Right
 	case 'd':
 		if (cameraPosition.x < 20 && !keyO) {
 			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			fredPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		}
 		break;
-		// Inventory
+	// Inventory
 	case 'i':
 		messageBoxID = MessageBox(NULL, sw, "Inventory", MB_OK);
 		switch (messageBoxID) {
@@ -1240,23 +1437,26 @@ void keypress(unsigned char key, int x, int y) {
 			break;
 		}
 		break;
-		// Move Camera Down
+	// Move Camera Down
 	case 'j':
 		if (cameraPosition.y >= 10 && !keyO) {
 			cameraPosition -= cameraSpeed * up;
 		}
 		break;
+	// Deposit Inventory Items into Bin
 	case 'm':
-		if (pressM && (bottleInventory != 0)) {
+		if (pressM && (bottleInventory != 0) & (bagInventory != 0)) {
 			keyM = true;
 			playerScore += bottleInventory;
+			playerScore += bagInventory * 3;
 			bottleInventory = 0;
+			bagInventory = 0;
 		}
 		else if (!pressM) {
 			keyM = false;
 		}
 		break;
-		// Overhead View
+	// Overhead View
 	case 'o':
 		if (!keyO) {
 			keyO = true;
@@ -1265,7 +1465,7 @@ void keypress(unsigned char key, int x, int y) {
 			keyO = false;
 		}
 		break;
-		// Pick up item
+	// Pick up item
 	case 'p':
 		if (pressP) {
 			keyP = true;
@@ -1274,32 +1474,32 @@ void keypress(unsigned char key, int x, int y) {
 			keyP = false;
 		}
 		break;
-		// Move Camera Backwards
 	// Reset camera to Fred's position
 	case 'r':
 		glm::vec3 newFredPos = glm::vec3(fredPos.x, fredPos.y, fredPos.z - 2);
 		cameraPosition = newFredPos;
 		break;
+	// Move Camera Backwards
 	case 's':
 		if (cameraPosition.z < 220 && !keyO) {
 			cameraPosition -= cameraSpeed * cameraFront;
 			fredPos -= cameraSpeed * cameraFront;
 		}
 		break;
-		// Move Camera Up
+	// Move Camera Up
 	case 'u':
 		if (cameraPosition.y < 30 && !keyO) {
 			cameraPosition += cameraSpeed * up;
 		}
 		break;
-		// Move Camera Forwards
+	// Move Camera Forwards
 	case 'w':
 		if (cameraPosition.z > -300 && !keyO) {
 			cameraPosition += cameraSpeed * cameraFront;
 			fredPos += cameraSpeed * cameraFront;
 		}
 		break;
-		// For button 'x' on the keyboard, the player will have the option to quit the game.
+	// For button 'x' on the keyboard, the player will have the option to quit the game.
 	case 'x':
 		messageBoxID = MessageBox(NULL, "Do you want to quit the game?", "Menu", MB_YESNO | MB_ICONQUESTION);
 
@@ -1315,6 +1515,7 @@ void keypress(unsigned char key, int x, int y) {
 }
 
 // -------------------------- MOUSE CAMERA MOVEMENTS --------------------------
+// When the pan camera view is on (key C is pressed), this function allows the camera to move around the screen.
 void mouseCameraMovement(int x, int y) {
 	if (keyC) {
 		if (firstMouse) {
@@ -1355,7 +1556,8 @@ void mouseCameraMovement(int x, int y) {
 }
 
 // -------------------------- ZOOM FUNCTIONALITY --------------------------
-
+// This function handles the scrollwheel on the mouse, if the player scrolls foward, the camera
+// will 'zoom in' and if they scroll backwards, the camera will 'zoom out'.
 void zoomCameraMovement(int button, int direction, int x, int y) {
 	float cameraSpeed = 10.0f;
 	if (cameraPosition.z > -300 && !keyO) {
@@ -1375,14 +1577,14 @@ void zoomCameraMovement(int button, int direction, int x, int y) {
 		}
 	}
 }
+#pragma endregion KEYBOARD_FUNCTIONS
 
+// ------------ MAIN FUNCTION/SETUP ------------
 int main(int argc, char** argv) {
-
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Eco Game");
-
+	glutCreateWindow("EcoGame");
 	// Tell glut where the display function is
 	glutDisplayFunc(display);
 	glutIdleFunc(updateScene);
