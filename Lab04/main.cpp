@@ -69,6 +69,7 @@ const char *shoe = "./textures/shoe_texture.jpg";
 const char *hair = "./textures/hair_texture.jpg";
 const char *rubbishBag = "./textures/rubbishBag_texture.jpg";
 
+// ------------ SETUP ------------
 using namespace std;
 int width = 800;
 int height = 600;
@@ -102,7 +103,7 @@ bool keyO = false;
 bool keyP = false;
 
 // ------------ SHADERS ------------
-GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID, fontShaderProgramID;
+GLuint textureShaderProgramID, skyboxShaderProgramID, objectShaderProgramID, textShaderProgramID;
 float uvScalar = 0;
 
 // ------------ VBO/VAO SETUP ------------
@@ -252,9 +253,9 @@ float skyboxVertices[] = {
 	 500.0f, -500.0f,  500.0f
 };
 
-// ------------ FREETYPE/TEXT ------------
+// ------------ FREETYPE/TEXT/FONT ------------
 #pragma region TEXT
-unsigned int fontVAO, fontVBO;
+unsigned int textVAO, textVBO;
 
 // This struct is used to store the individual character information.
 struct Character {
@@ -266,34 +267,34 @@ struct Character {
 
 std::map<char, Character> Characters;
 
+// This function is called initially in main to set up the Arial font that is used in the game
+// to display information such as the score, inventory and camera controls.
 int createFont() {
 	FT_Library ft;
 	if (FT_Init_FreeType(&ft))
 	{
-		std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
+		std::cout << "Error loading FreeType Library" << std::endl;
 		return -1;
 	}
+
 	FT_Face face;
-	FT_New_Face(ft, "./fonts/arial.ttf", 0, &face);
 	if (FT_New_Face(ft, "./fonts/arial.ttf", 0, &face))
 	{
-		std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
+		std::cout << "Error loading Font" << std::endl;
 		return -1;
 	}
 	else {
 		FT_Set_Pixel_Sizes(face, 0, 25);
 
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); 
 
 		for (unsigned char c = 0; c < 128; c++)
 		{
-			// load character glyph 
 			if (FT_Load_Char(face, c, FT_LOAD_RENDER))
 			{
-				std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
+				std::cout << "Error loading Glyph" << std::endl;
 				continue;
 			}
-			// generate texture
 			unsigned int texture;
 			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
@@ -308,12 +309,10 @@ int createFont() {
 				GL_UNSIGNED_BYTE,
 				face->glyph->bitmap.buffer
 			);
-			// set texture options
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			// now store character for later use
 			Character character = {
 				texture,
 				glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
@@ -324,20 +323,19 @@ int createFont() {
 		}
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
 }
 
+// This function is used to generate the text on the screen. The text, shader, text position, scale and colour
+// are all passed in.
 void RenderText(GLuint shaderProgramID, std::string text, float x, float y, float scale, glm::vec3 color)
 {
-	// activate corresponding render state	
 	glUseProgram(shaderProgramID);
 	glUniform3f(glGetUniformLocation(shaderProgramID, "textColor"), color.x, color.y, color.z);
 	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(fontVAO);
+	glBindVertexArray(textVAO);
 
-	// iterate through all characters
 	std::string::const_iterator c;
 	for (c = text.begin(); c != text.end(); c++)
 	{
@@ -348,7 +346,6 @@ void RenderText(GLuint shaderProgramID, std::string text, float x, float y, floa
 
 		float w = ch.Size.x * scale;
 		float h = ch.Size.y * scale;
-		// update VBO for each character
 		float vertices[6][4] = {
 			{ xpos,     ypos + h,   0.0f, 0.0f },
 			{ xpos,     ypos,       0.0f, 1.0f },
@@ -358,16 +355,12 @@ void RenderText(GLuint shaderProgramID, std::string text, float x, float y, floa
 			{ xpos + w, ypos,       1.0f, 1.0f },
 			{ xpos + w, ypos + h,   1.0f, 0.0f }
 		};
-		// render glyph texture over quad
 		glBindTexture(GL_TEXTURE_2D, ch.TextureID);
-		// update content of VBO memory
-		glBindBuffer(GL_ARRAY_BUFFER, fontVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, textVBO);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		// render quad
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-		x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
+		x += (ch.Advance >> 6) * scale;
 	}
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -626,10 +619,10 @@ void generateNonTextureObjects(std::vector <ModelData> nonTextureObjects) {
 }
 
 void generateFontBufferObjects() {
-	glGenVertexArrays(1, &fontVAO);
-	glGenBuffers(1, &fontVBO);
-	glBindVertexArray(fontVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, fontVBO);
+	glGenVertexArrays(1, &textVAO);
+	glGenBuffers(1, &textVBO);
+	glBindVertexArray(textVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, textVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
@@ -1486,53 +1479,52 @@ void display() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glm::mat4 projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
-	glUseProgram(fontShaderProgramID);
-	glUniformMatrix4fv(glGetUniformLocation(fontShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
+	glUseProgram(textShaderProgramID);
+	glUniformMatrix4fv(glGetUniformLocation(textShaderProgramID, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
 
 	// Display Score
-	RenderText(fontShaderProgramID, "Score: " + std::to_string(playerScore), 660.0f, 550.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
+	RenderText(textShaderProgramID, "Score: " + std::to_string(playerScore), 660.0f, 550.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
 
 	// Show Camera Movement Buttons
-	RenderText(fontShaderProgramID, "Camera", 50.0f, 570.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "W", 40.0f, 540.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "A", 10.0f, 510.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "S", 42.0f, 480.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "D", 75.0f, 510.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "U", 120.0f, 535.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "J", 120.0f, 485.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "C - Look Around", 10.0f, 425.0f, 1.0f, glm::vec3(1.0f));
-	RenderText(fontShaderProgramID, "O - Overhead View", 10.0f, 395.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "Camera", 50.0f, 570.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "W", 40.0f, 540.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "A", 10.0f, 510.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "S", 42.0f, 480.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "D", 75.0f, 510.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "U", 120.0f, 535.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "J", 120.0f, 485.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "C - Look Around", 10.0f, 425.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "O - Overhead View", 10.0f, 395.0f, 1.0f, glm::vec3(1.0f));
 
 	// Display 'Press M' when near bin
 	if (pressM) {
 		if (bottleInventory > 0 || bagInventory > 0) {
-			RenderText(fontShaderProgramID, "Press M", 350.0f, 450.0f, 1.0f, glm::vec3(0.0f));
+			RenderText(textShaderProgramID, "Press M", 350.0f, 450.0f, 1.0f, glm::vec3(0.0f));
 		}
 	}
 	
 	// Display 'Press P' when near object
 	if (pressP) {
-		RenderText(fontShaderProgramID, "Press P", 350.0f, 500.0f, 1.0f, glm::vec3(0.0f));
+		RenderText(textShaderProgramID, "Press P", 350.0f, 500.0f, 1.0f, glm::vec3(0.0f));
 	}
 
 	// Display R if camera view is different than FredPos 
 	if (cameraPosition.x != fredPos.x || cameraPosition.y != fredPos.y || (glm::distance(cameraPosition.z, fredPos.z) > 5)) {
-		RenderText(fontShaderProgramID, "Press R to Reset View", 275.0f, 400.0f, 1.0f, glm::vec3(0.0f));
+		RenderText(textShaderProgramID, "Press R to Reset View", 275.0f, 400.0f, 1.0f, glm::vec3(0.0f));
 	}
 
 	// Show Inventory
-	RenderText(fontShaderProgramID, "Inventory", 660.0f, 480.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
-	RenderText(fontShaderProgramID, "Bottles: " + std::to_string(bottleInventory), 660.0f, 450.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
-	RenderText(fontShaderProgramID, "Bags: " + std::to_string(bagInventory), 660.0f, 420.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
+	RenderText(textShaderProgramID, "Inventory", 660.0f, 480.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
+	RenderText(textShaderProgramID, "Bottles: " + std::to_string(bottleInventory), 660.0f, 450.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
+	RenderText(textShaderProgramID, "Bags: " + std::to_string(bagInventory), 660.0f, 420.0f, 1.0f, glm::vec3(0.3f, 0.3f, 0.3f));
 
 	// Show Quit Option
-	RenderText(fontShaderProgramID, "Press X to Quit", 620.0f, 10.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "Press X to Quit", 620.0f, 10.0f, 1.0f, glm::vec3(1.0f));
 	
 	// ------------------------------------- PROGRESS ------------------------------------- 
 	int progress = (float(stepCounter) / float(stepTotal)) * 100 ;
-	RenderText(fontShaderProgramID, "Game Progress: " + std::to_string(progress) + "%" , 10.0f, 10.0f, 1.0f, glm::vec3(1.0f));
+	RenderText(textShaderProgramID, "Game Progress: " + std::to_string(progress) + "%" , 10.0f, 10.0f, 1.0f, glm::vec3(1.0f));
 
-	
 	// ------------------------------------- END GAME ------------------------------------- 
 
 	if (playerScore == 25) {
@@ -1545,8 +1537,9 @@ void display() {
 		}
 	}
 
-	if (fredPos.z <= -200) {
-		if (bottleInventory != 10 && bagInventory != 5) {
+	if (fredPos.z <= -210) {
+		int remainingScore = playerScore + (bottleInventory + (bagInventory * 3));
+		if (remainingScore != 25) {
 			std::string score = "You Lost! You failed to collect all of the waste items :(\nYour final score is " + std::to_string(playerScore) + "\nThank you for playing!";
 			LPCSTR sw = score.c_str();
 			int messageBoxID = MessageBox(NULL, sw, "Game Over!", MB_OK);
@@ -1586,7 +1579,7 @@ void init()
 	textureShaderProgramID = CompileShaders("./shaders/textureVertexShader.txt", "./shaders/textureFragmentShader.txt");
 	skyboxShaderProgramID = CompileShaders("./shaders/skyboxVertexShader.txt", "./shaders/skyboxFragmentShader.txt");
 	objectShaderProgramID = CompileShaders("./shaders/objectVertexShader.txt", "./shaders/objectFragmentShader.txt");
-	fontShaderProgramID = CompileShaders("./shaders/fontVertexShader.txt", "./shaders/fontFragmentShader.txt");
+	textShaderProgramID = CompileShaders("./shaders/textVertexShader.txt", "./shaders/textFragmentShader.txt");
 	// generate Skybox and load Skybox images
 	generateSkybox();
 	cubemapTexture = loadCubemap(faces);
