@@ -166,7 +166,7 @@ bool bottle7 = true;
 bool bottle8 = true;
 bool bottle9 = true;
 bool bottle10 = true;
-glm::vec3 bottle1Pos = glm::vec3(-16.0f, 3.8f, 180.0f);
+glm::vec3 bottle1Pos = glm::vec3(-16.0f, 3.7f, 180.0f);
 glm::vec3 bottle2Pos = glm::vec3(-18.0f, 3.8f, 130.0f);
 glm::vec3 bottle3Pos = glm::vec3(14.0f, 3.8f, 95.0f);
 glm::vec3 bottle4Pos = glm::vec3(-12.0f, 3.8f, 50.0f);
@@ -680,6 +680,20 @@ void generateSkybox() {
 }
 #pragma endregion SKYBOX_FUNCTION
 
+// ------------ DRAW MODELS FUNCTION ------------
+#pragma region MODELS
+// This function takes in a model and it's respective details including the position and rotations (if any) and
+// draws the model in the correct place on the screen.
+void drawModel(glm::mat4 model, glm::vec3 modelPos, float rotation, glm::vec3 rotationVec, int matrix_location, ModelData modelData) {
+	model = glm::translate(model, modelPos);
+	if (rotation != 0.0f) {
+		model = glm::rotate(model, glm::radians(rotation), rotationVec);
+	}
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(model));
+	glDrawArrays(GL_TRIANGLES, 0, modelData.mPointCount);
+}
+#pragma endregion MODELS
+
 // ------------ DISPLAY ------------
 void display() {
 	glEnable(GL_DEPTH_TEST);
@@ -905,28 +919,19 @@ void display() {
 
 	// Bin 1
 	glm::mat4 binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, bin1Pos);
-	matrix_location = glGetUniformLocation(textureShaderProgramID, "model");
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
+	drawModel(binModel, bin1Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[0]);
 
 	// Bin 2
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, bin2Pos);
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
+	drawModel(binModel, bin2Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[0]);
 
 	// Bin 3
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, bin3Pos);
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
+	drawModel(binModel, bin3Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[0]);
 
 	// Bin 4
 	binModel = glm::mat4(1.0f);
-	binModel = glm::translate(binModel, bin4Pos);
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(binModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[0].mPointCount);
+	drawModel(binModel, bin4Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[0]);
 
 	// ------------------------------------- FOOTPATHS ------------------------------------- (texture Shader)
 	// uvScalar
@@ -939,15 +944,11 @@ void display() {
 
 	// Footpath 1
 	glm::mat4 footpathModel = glm::mat4(1.0f);
-	footpathModel = glm::translate(footpathModel, glm::vec3(0.0f, 2.0f, 0.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[1].mPointCount);
+	drawModel(footpathModel, glm::vec3(0.0f, 2.0f, 0.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[1]);
 
 	// Footpath 2
 	footpathModel = glm::mat4(1.0f);
-	footpathModel = glm::translate(footpathModel, glm::vec3(-150.0f, 2.0f, 0.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(footpathModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[1].mPointCount);
+	drawModel(footpathModel, glm::vec3(-150.0f, 2.0f, 0.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[1]);
 
 	// ------------------------------------- ROAD ------------------------------------- (texture Shader)
 	// uvScalar
@@ -960,9 +961,7 @@ void display() {
 
 	// Road
 	glm::mat4 roadModel = glm::mat4(1.0f);
-	roadModel = glm::translate(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(roadModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[2].mPointCount);
+	drawModel(roadModel, glm::vec3(-75.0f, 0.0f, -100.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[2]);
 
 	// ------------------------------------- BUILDING1 ------------------------------------- (texture Shader)
 	// uvScalar
@@ -975,21 +974,15 @@ void display() {
 
 	// Building 1 - 1
 	glm::mat4 building1Model = glm::mat4(1.0f);
-	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, 20.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
+	drawModel(building1Model, glm::vec3(-185.0f, 0.0f, 20.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[3]);
 
 	// Building 1 - 2
 	building1Model = glm::mat4(1.0f);
-	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -98.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
+	drawModel(building1Model, glm::vec3(-185.0f, 0.0f, -98.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[3]);
 
 	// Building 1 - 3
 	building1Model = glm::mat4(1.0f);
-	building1Model = glm::translate(building1Model, glm::vec3(-185.0f, 0.0f, -152.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building1Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[3].mPointCount);
+	drawModel(building1Model, glm::vec3(-185.0f, 0.0f, -152.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[3]);
 
 	// ------------------------------------- BUILDING2 ------------------------------------- (texture Shader)
 	// uvScalar
@@ -1002,15 +995,11 @@ void display() {
 
 	// Building 2 - 1
 	glm::mat4 building2Model = glm::mat4(1.0f);
-	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -39.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[4].mPointCount);
-
+	drawModel(building2Model, glm::vec3(-185.0f, 0.0f, -39.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[4]);
+	
 	// Building 2 - 2
 	building2Model = glm::mat4(1.0f);
-	building2Model = glm::translate(building2Model, glm::vec3(-185.0f, 0.0f, -211.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building2Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[4].mPointCount);
+	drawModel(building2Model, glm::vec3(-185.0f, 0.0f, -211.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[4]);
 
 	// ------------------------------------- BUILDING3 ------------------------------------- (texture Shader)
 	// uvScalar
@@ -1023,15 +1012,11 @@ void display() {
 
 	// Building 3 - 1
 	glm::mat4 building3Model = glm::mat4(1.0f);
-	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 100.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[5].mPointCount);
+	drawModel(building3Model, glm::vec3(-185.0f, 0.0f, 100.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[5]);
 
 	// Building 3 - 2
 	building3Model = glm::mat4(1.0f);
-	building3Model = glm::translate(building3Model, glm::vec3(-185.0f, 0.0f, 218.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(building3Model));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[5].mPointCount);
+	drawModel(building3Model, glm::vec3(-185.0f, 0.0f, 218.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[5]);
 
 	// ------------------------------------- GRASS ------------------------------------- (texture Shader)
 	// uvScalar
@@ -1044,9 +1029,7 @@ void display() {
 
 	// Grass
 	glm::mat4 grassModel = glm::mat4(1.0f);
-	grassModel = glm::translate(grassModel, glm::vec3(20.0f, -12.0f, -20.0f));
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(grassModel));
-	glDrawArrays(GL_TRIANGLES, 0, meshData[6].mPointCount);
+	drawModel(grassModel, glm::vec3(20.0f, -12.0f, -20.0f), 0.0f, glm::vec3(0.0f), matrix_location, meshData[6]);
 
 	// ------------------------------------- CHEST ------------------------------------- (texture Shader)
 	//uvScalar
@@ -1177,87 +1160,61 @@ void display() {
 	glm::mat4 bottleModel = glm::mat4(1.0f);
 	// Bottle 1
 	if (bottle1) {
-		bottleModel = glm::translate(bottleModel, bottle1Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle1Pos, -90.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle2
 	if (bottle2) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle2Pos);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle2Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle3
 	if (bottle3) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle3Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(-50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle3Pos, -50.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle4
 	if (bottle4) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle4Pos);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle4Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle5
 	if (bottle5) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle5Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle5Pos, 20.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle6
 	if (bottle6) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle6Pos);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle6Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle7
 	if (bottle7) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle7Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(-76.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle7Pos, -76.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle8
 	if (bottle8) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle8Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(32.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle8Pos, 32.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle9
 	if (bottle9) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle9Pos);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle9Pos, 0.0f, glm::vec3(0.0f), matrix_location, meshData[14]);
 	}
 
 	// Bottle10
 	if (bottle10) {
 		bottleModel = glm::mat4(1.0f);
-		bottleModel = glm::translate(bottleModel, bottle10Pos);
-		bottleModel = glm::rotate(bottleModel, glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bottleModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[14].mPointCount);
+		drawModel(bottleModel, bottle10Pos, 10.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[14]);
 	}
 
 	// Pick up Bottles
@@ -1375,51 +1332,31 @@ void display() {
 	glm::mat4 bagModel = glm::mat4(1.0f);
 	// Bag 1
 	if (bag1) {
-		bagModel = glm::translate(bagModel, bag1Pos);
-		bagModel = glm::rotate(bagModel, glm::radians(-45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+		drawModel(bagModel, bag1Pos, -45.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[15]);
 	}
 
 	// Bag 2
 	if (bag2) {
 		bagModel = glm::mat4(1.0f);
-		bagModel = glm::translate(bagModel, bag2Pos);
-		bagModel = glm::rotate(bagModel, glm::radians(-90.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+		drawModel(bagModel, bag2Pos, -90.0f, glm::vec3(1.0f, 1.0f, 0.0f), matrix_location, meshData[15]);
 	}
 
 	// Bag 3
 	if (bag3) {
 		bagModel = glm::mat4(1.0f);
-		bagModel = glm::translate(bagModel, bag3Pos);
-		bagModel = glm::rotate(bagModel, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+		drawModel(bagModel, bag3Pos, -90.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[15]);
 	}
 
 	// Bag 4
 	if (bag4) {
 		bagModel = glm::mat4(1.0f);
-		bagModel = glm::translate(bagModel, bag4Pos);
-		bagModel = glm::rotate(bagModel, glm::radians(-45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+		drawModel(bagModel, bag4Pos, -45.0f, glm::vec3(0.0f, 1.0f, 0.0f), matrix_location, meshData[15]);
 	}
 
 	// Bag 5
 	if (bag5) {
 		bagModel = glm::mat4(1.0f);
-		bagModel = glm::translate(bagModel, bag5Pos);
-		bagModel = glm::rotate(bagModel, glm::radians(-180.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-		matrix_location = glGetUniformLocation(objectShaderProgramID, "model");
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, glm::value_ptr(bagModel));
-		glDrawArrays(GL_TRIANGLES, 0, meshData[15].mPointCount);
+		drawModel(bagModel, bag5Pos, -180.0f, glm::vec3(1.0f, 1.0f, 0.0f), matrix_location, meshData[15]);
 	}
 
 	// Pick up Bags
@@ -1474,7 +1411,7 @@ void display() {
 		}
 	}
 
-	// ------------------------------------- FONT ------------------------------------- (font Shader)
+	// ------------------------------------- TEXT ------------------------------------- (font Shader)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1596,10 +1533,6 @@ void init()
 void keypress(unsigned char key, int x, int y) {
 	float cameraSpeed = 300.0f * delta;
 	int messageBoxID;
-	std::string s = "Bottles: " + std::to_string(bottleInventory) + "\nBags: " + std::to_string(bagInventory);
-	LPCSTR sw = s.c_str();
-	std::string score = "Score: " + std::to_string(playerScore);
-	LPCSTR scores = score.c_str();
 	switch (key) {
 	// Move Camera Left
 	case 'a':
