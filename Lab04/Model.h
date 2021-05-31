@@ -1,5 +1,4 @@
 #pragma once
-
 // Include Windows and Vector
 #include <windows.h>
 #include <vector> 
