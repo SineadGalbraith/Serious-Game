@@ -1,3 +1,2 @@
-# Sinéad Galbraith - CS7GV6 Computer Graphics
+# CS7GV6 Computer Graphics - Serious Game
 
-This repository contains the game I have created for my Computer Graphics 'Serious Game' Assignment.
